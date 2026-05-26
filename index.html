@@ -73,12 +73,10 @@
     .distrib-highlight-title { font-size: 11px; color: var(--green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
     .val-green { color: var(--green); } .val-red { color: var(--red); } .val-orange { color: var(--orange); }
     .btn { padding: 9px 18px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-primary { background: var(--text); color: #fff; }
-    .btn-primary:hover { opacity: 0.85; }
-    .btn-success { background: var(--green); color: #fff; }
-    .btn-success:hover { opacity: 0.85; }
-    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--border); }
+    .btn-primary { background: var(--text); color: #fff; } .btn-primary:hover { opacity: 0.85; }
+    .btn-success { background: var(--green); color: #fff; } .btn-success:hover { opacity: 0.85; }
+    .btn-blue { background: var(--blue); color: #fff; } .btn-blue:hover { opacity: 0.85; }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); } .btn-secondary:hover { background: var(--border); }
     .btn-sm { padding: 5px 12px; font-size: 12px; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .alert { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-top: 12px; display: flex; align-items: center; gap: 8px; }
@@ -106,11 +104,9 @@
     .cal-week:last-child { border-bottom: none; }
     .cal-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .cal-sem { width: 50px; color: var(--text-3); font-size: 11px; font-family: 'DM Mono', monospace; }
-    .cal-dates { flex: 1; }
-    .cal-prop { font-size: 11px; color: var(--text-2); text-align: right; }
+    .cal-dates { flex: 1; } .cal-prop { font-size: 11px; color: var(--text-2); text-align: right; }
     .cal-month { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 6px; }
     .pendientes-banner { background: var(--orange-bg); border: 1px solid #FAD7A0; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--orange); }
-    /* MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
     .modal { background: var(--surface); border-radius: var(--radius); padding: 24px; width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
@@ -124,7 +120,16 @@
     .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
     input:checked + .toggle-slider { background: var(--green); }
     input:checked + .toggle-slider:before { transform: translateX(18px); }
-    @media (max-width: 640px) { .prop-grid { grid-template-columns: 1fr; } .form-grid { grid-template-columns: 1fr; } .form-grid-3 { grid-template-columns: 1fr; } }
+    /* REPORTE */
+    .reporte-header { background: var(--text); color: #fff; border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+    .reporte-logo { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+    .reporte-periodo { font-size: 12px; color: #aaa; }
+    .reporte-socio { font-size: 20px; font-weight: 600; margin-top: 8px; }
+    .reporte-resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .reporte-metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+    .reporte-metric-val { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 600; }
+    .reporte-metric-label { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+    @media (max-width: 640px) { .prop-grid { grid-template-columns: 1fr; } .form-grid { grid-template-columns: 1fr; } .form-grid-3 { grid-template-columns: 1fr; } .reporte-resumen { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -146,10 +151,7 @@
 <div class="header">
   <div class="header-brand">
     <div class="header-logo"><span>S</span></div>
-    <div>
-      <div class="header-title">Sapema</div>
-      <div class="header-sub">Sergio · Amalia · Pedro · María Adelaida</div>
-    </div>
+    <div><div class="header-title">Sapema</div><div class="header-sub">Sergio · Amalia · Pedro · María Adelaida</div></div>
   </div>
   <div id="conn-status"></div>
 </div>
@@ -160,6 +162,7 @@
     <button class="nav-btn" onclick="showSection('reservas',this)"><i class="ti ti-plus"></i> Nueva reserva</button>
     <button class="nav-btn" onclick="showSection('historial',this)"><i class="ti ti-list"></i> Historial</button>
     <button class="nav-btn" onclick="showSection('socios',this)"><i class="ti ti-users"></i> Socios</button>
+    <button class="nav-btn" onclick="showSection('reportes',this)"><i class="ti ti-file-text"></i> Reportes</button>
     <button class="nav-btn" onclick="showSection('semanas',this)"><i class="ti ti-calendar-week"></i> Semanas M1</button>
   </div>
 
@@ -267,7 +270,7 @@
       </div>
       <div class="form-grid">
         <div class="form-group"><label>Valor bruto (COP)</label><input type="number" id="r-bruto" placeholder="0" oninput="calcDistrib()"></div>
-        <div class="form-group" id="x-comision-auto">
+        <div class="form-group">
           <label id="lbl-comision">Comisión plataforma</label>
           <input type="text" id="r-comision-display" readonly placeholder="Se calcula automático">
           <input type="hidden" id="r-comision">
@@ -311,7 +314,7 @@
         <div class="sep"></div>
         <div class="distrib-title">Distribución estimada</div>
         <div class="distrib-box"><div id="distrib-content"></div></div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:8px"><i class="ti ti-info-circle"></i> La liquidación final se confirma al marcar la reserva como pagada.</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:8px"><i class="ti ti-info-circle"></i> La liquidación final se confirma al marcar como pagada.</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn btn-primary" id="btn-guardar" onclick="guardarReserva()"><i class="ti ti-check"></i> Guardar reserva</button>
@@ -336,7 +339,7 @@
           <option value="pagado">Pagado</option><option value="pendiente">Pendiente</option>
           <option value="abono">Abono</option><option value="no_paga">No paga</option>
         </select>
-        <button class="btn btn-secondary btn-sm" onclick="exportarExcel()"><i class="ti ti-download"></i> Exportar Excel</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportarExcel()"><i class="ti ti-download"></i> Exportar CSV</button>
       </div>
       <div class="table-wrap"><div id="historial-content"><div style="text-align:center;padding:2rem;color:var(--text-3)">Cargando...</div></div></div>
     </div>
@@ -385,6 +388,41 @@
     </div>
   </div>
 
+  <!-- REPORTES -->
+  <div id="section-reportes" class="section">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-file-text"></i> Generar reporte de gestión</div>
+      <div class="form-grid-3">
+        <div class="form-group"><label>Socio</label>
+          <select id="rep-socio">
+            <option value="Juan David Bridge">Juan David Bridge</option>
+            <option value="Santiago Arango">Santiago Arango</option>
+            <option value="Alejandro Londoño">Alejandro Londoño</option>
+            <option value="Nicolás Velásquez">Nicolás Velásquez</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Desde</label><input type="date" id="rep-desde"></div>
+        <div class="form-group"><label>Hasta</label><input type="date" id="rep-hasta"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" onclick="generarReporte()"><i class="ti ti-eye"></i> Ver reporte</button>
+        <button class="btn btn-blue" onclick="descargarReporte()"><i class="ti ti-download"></i> Descargar PDF</button>
+      </div>
+    </div>
+    <div id="reporte-contenido" style="display:none">
+      <div class="reporte-header" id="rep-header"></div>
+      <div class="reporte-resumen" id="rep-resumen"></div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-list"></i> Detalle de reservas</div>
+        <div class="table-wrap"><div id="rep-tabla"></div></div>
+      </div>
+      <div class="card" style="background:var(--green-bg);border-color:#A8D5B5;">
+        <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="ti ti-send"></i> Resumen de pagos</div>
+        <div id="rep-pagos"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- SEMANAS M1 -->
   <div id="section-semanas" class="section">
     <div class="card">
@@ -409,27 +447,22 @@
 const SUPA_URL='https://xcmzxafoogqapakejgwf.supabase.co';
 const SUPA_KEY='sb_publishable_FAFlhOmenvLMC1l1Q8nrlQ_uo2UE-t4';
 const HEADERS={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
-let reservas=[], liquidandoId=null, liquidandoReserva=null;
-
+let reservas=[],liquidandoId=null,liquidandoReserva=null;
 const PROPS={GO:{nombre:'GO Living',color:'var(--go)'},M1:{nombre:'Villa M1',color:'var(--m1)'},L3:{nombre:'Villa L3',color:'var(--l3)'},H4:{nombre:'Villa H4',color:'var(--h4)'}};
 const TIPOS={GO:['Airbnb'],M1:['Airbnb','Booking','Directo'],L3:['Airbnb','Booking','Directo'],H4:['Hotel trimestral','Retiro directo']};
 
 async function supaFetch(path,opts={}){
   const res=await fetch(SUPA_URL+path,{headers:HEADERS,...opts});
-  if(!res.ok) throw new Error(await res.text());
+  if(!res.ok)throw new Error(await res.text());
   return res.status===204?null:res.json();
 }
-
 async function loadReservas(){
   try{
     reservas=await supaFetch('/rest/v1/reservas?select=*&order=entrada.desc');
     document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-ok"><i class="ti ti-circle-check"></i> Conectado — Sapema</div>';
     renderDashboard();
-  }catch(e){
-    document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-err"><i class="ti ti-alert-circle"></i> Sin conexión</div>';
-  }
+  }catch(e){document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-err"><i class="ti ti-alert-circle"></i> Sin conexión</div>';}
 }
-
 function fmt(n){return '$'+Math.round(n||0).toLocaleString('es-CO');}
 function getNights(e,s){if(!e||!s)return 0;return Math.max(0,Math.round((new Date(s)-new Date(e))/86400000));}
 function round2(n){return Math.round(n*100)/100;}
@@ -439,15 +472,11 @@ function showSection(id,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('section-'+id).classList.add('active');
   btn.classList.add('active');
-  if(id==='semanas') renderCalendario();
+  if(id==='semanas')renderCalendario();
   if(id==='socios'){renderResumenSocios();renderPendientes();}
-  if(id==='historial') renderHistorial();
-  if(id==='dashboard') renderDashboard();
-}
-
-function getComisionAuto(tipo,bruto){
-  if(tipo==='Booking') return round2(bruto*0.18);
-  return 0;
+  if(id==='historial')renderHistorial();
+  if(id==='dashboard')renderDashboard();
+  if(id==='reportes')initReporte();
 }
 
 function onPropChange(){
@@ -460,101 +489,73 @@ function onPropChange(){
   document.getElementById('x-go').style.display=p==='GO'?'block':'none';
   calcDistrib();
 }
-
 function onTipoChange(){
-  const p=document.getElementById('r-prop').value;
-  const t=document.getElementById('r-tipo').value;
+  const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const sem=document.getElementById('r-semana')?document.getElementById('r-semana').value:'';
   const h4m=document.getElementById('r-h4-modo')?document.getElementById('r-h4-modo').value:'';
-  const showFR=(p==='M1'&&sem==='Nico')||(p==='H4'&&h4m==='retiro');
-  document.getElementById('x-fee-resort').style.display=showFR?'block':'none';
+  document.getElementById('x-fee-resort').style.display=((p==='M1'&&sem==='Nico')||(p==='H4'&&h4m==='retiro'))?'block':'none';
   document.getElementById('x-l3-directo').style.display=(p==='L3'&&t==='Directo')?'block':'none';
-  // Update comision label
   const lbl=document.getElementById('lbl-comision');
-  if(t==='Booking') lbl.textContent='Comisión Booking (18% — automático)';
-  else if(t==='Airbnb') lbl.textContent='Comisión Airbnb (incluida en neto)';
+  if(t==='Booking')lbl.textContent='Comisión Booking (18% — automático)';
+  else if(t==='Airbnb')lbl.textContent='Comisión Airbnb (incluida en neto)';
   else lbl.textContent='Comisión plataforma';
   calcDistrib();
 }
-
 function getFeeResort(){
   const tipo=document.getElementById('r-fee-tipo').value;
-  if(tipo==='otro'){
-    document.getElementById('x-fee-custom').style.display='block';
-    return parseFloat(document.getElementById('r-fee-custom').value)||0;
-  }
+  if(tipo==='otro'){document.getElementById('x-fee-custom').style.display='block';return parseFloat(document.getElementById('r-fee-custom').value)||0;}
   document.getElementById('x-fee-custom').style.display='none';
-  const noches=getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value);
-  const personas=parseInt(document.getElementById('r-personas').value)||1;
-  return noches*personas*parseInt(tipo);
+  return getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value)*(parseInt(document.getElementById('r-personas').value)||1)*parseInt(tipo);
 }
-
 function calcDistrib(){
-  const p=document.getElementById('r-prop').value;
-  const bruto=parseFloat(document.getElementById('r-bruto').value)||0;
+  const p=document.getElementById('r-prop').value,bruto=parseFloat(document.getElementById('r-bruto').value)||0;
   if(!p||bruto===0){document.getElementById('distrib-box').style.display='none';return;}
   const tipo=document.getElementById('r-tipo').value;
-  const comision=getComisionAuto(tipo,bruto);
+  const comision=tipo==='Booking'?round2(bruto*0.18):0;
   document.getElementById('r-comision').value=comision;
   document.getElementById('r-comision-display').value=comision>0?fmt(comision):'$0';
-  const personas=parseInt(document.getElementById('r-personas').value)||1;
-  const noches=getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value);
-  const aseo=p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0;
   const semana=p==='M1'?document.getElementById('r-semana').value:'';
-  const santi_m1=p==='M1'?document.getElementById('r-santi-m1').value:'';
-  const santi_h4=p==='H4'?document.getElementById('r-santi-h4').value:'';
   const h4_modo=p==='H4'?document.getElementById('r-h4-modo').value:'';
-  const gestor=(document.getElementById('r-gestor')||{}).value||'sergio';
-  const neto=bruto-comision;
   let feeResort=0;
-  if((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')){
-    feeResort=getFeeResort();
-    document.getElementById('r-fee-val').value=fmt(feeResort);
-  }
-  if(p==='L3'&&tipo==='Directo') document.getElementById('r-fee-comercial').value=fmt(neto*0.1);
-  const r={prop:p,tipo,bruto,comision,comision_pasarela:0,neto,personas,noches,aseo,semana,santi_m1,santi_h4,h4_modo,gestor,fee_resort_historico:feeResort};
+  if((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')){feeResort=getFeeResort();document.getElementById('r-fee-val').value=fmt(feeResort);}
+  const neto=bruto-comision;
+  if(p==='L3'&&tipo==='Directo')document.getElementById('r-fee-comercial').value=fmt(neto*0.1);
+  const r={prop:p,tipo,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches:getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value),aseo:p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0,semana,santi_m1:p==='M1'?document.getElementById('r-santi-m1').value:'',santi_h4:p==='H4'?document.getElementById('r-santi-h4').value:'',h4_modo,gestor:(document.getElementById('r-gestor')||{}).value||'sergio',fee_resort_historico:feeResort};
   const items=getDistrib(r);
   document.getElementById('distrib-box').style.display='block';
-  document.getElementById('distrib-content').innerHTML=items.map(d=>{
-    const cls=d.t==='costo'?'val-red':d.t==='admon'?'val-orange':'val-green';
-    return`<div class="distrib-row"><span class="distrib-name">${d.n}</span><span class="distrib-val ${cls}">${fmt(d.v)}</span></div>`;
-  }).join('');
+  document.getElementById('distrib-content').innerHTML=items.map(d=>`<div class="distrib-row"><span class="distrib-name">${d.n}</span><span class="distrib-val ${d.t==='costo'?'val-red':d.t==='admon'?'val-orange':'val-green'}">${fmt(d.v)}</span></div>`).join('');
 }
 
 function getDistrib(r){
   const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
   let items=[];
-  if(r.prop==='GO'){
-    items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Aseo',v:-(r.aseo||0),t:'costo'},{n:'Sergio Arango (100%)',v:neto-(r.aseo||0),t:'ingreso'}];
-  }else if(r.prop==='M1'){
-    const admon=neto*0.1;const resto=neto-admon;
-    if(r.semana==='Nico'){
-      const fr=r.fee_resort_historico||0;
-      items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort (absorbe Nicolás)',v:-fr,t:'costo'},{n:'Nicolás Velásquez',v:resto-fr,t:'ingreso'}];
-    }else{
-      const santi=r.santi_m1==='si';
-      items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango ('+(santi?'25':'50')+'%)',v:resto*(santi?0.25:0.5),t:'ingreso'}];
-      if(santi)items.push({n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'});
-    }
+  if(r.prop==='GO'){items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Aseo',v:-(r.aseo||0),t:'costo'},{n:'Sergio Arango (100%)',v:neto-(r.aseo||0),t:'ingreso'}];}
+  else if(r.prop==='M1'){
+    const admon=neto*0.1,resto=neto-admon;
+    if(r.semana==='Nico'){const fr=r.fee_resort_historico||0;items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort (absorbe Nicolás)',v:-fr,t:'costo'},{n:'Nicolás Velásquez',v:resto-fr,t:'ingreso'}];}
+    else{const santi=r.santi_m1==='si';items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango ('+(santi?'25':'50')+'%)',v:resto*(santi?0.25:0.5),t:'ingreso'}];if(santi)items.push({n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'});}
   }else if(r.prop==='L3'){
-    if(r.tipo==='Directo'){
-      const fee=neto*0.1;const resto=neto-fee;
-      const gn=r.gestor==='sergio'?'Sergio Arango':r.gestor==='alejandro'?'Alejandro Londoño':'Tercero';
-      items=[{n:'Fee comercial → '+gn,v:fee,t:'admon'},{n:'Sergio Arango (50%)',v:resto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:resto*0.5,t:'ingreso'}];
-    }else{
-      items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Sergio Arango (50%)',v:neto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:neto*0.5,t:'ingreso'}];
-    }
+    if(r.tipo==='Directo'){const fee=neto*0.1,resto=neto-fee,gn=r.gestor==='sergio'?'Sergio Arango':r.gestor==='alejandro'?'Alejandro Londoño':'Tercero';items=[{n:'Fee comercial → '+gn,v:fee,t:'admon'},{n:'Sergio Arango (50%)',v:resto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:resto*0.5,t:'ingreso'}];}
+    else{items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Sergio Arango (50%)',v:neto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:neto*0.5,t:'ingreso'}];}
   }else if(r.prop==='H4'){
-    const modo=r.h4_modo||'hotel';
-    if(modo==='retiro'){
-      const admon=neto*0.1;const fr=r.fee_resort_historico||0;const resto=neto-admon-fr;
-      items=[{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort hotel',v:-fr,t:'costo'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:resto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'}];
-    }else{
-      const santi=r.santi_h4!=='no';
-      items=santi?[{n:'Juan David Bridge (50%)',v:neto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:neto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:neto*0.25,t:'ingreso'}]:[{n:'Juan David Bridge (66.7%)',v:neto*0.667,t:'ingreso'},{n:'Sergio Arango (33.3%)',v:neto*0.333,t:'ingreso'}];
-    }
+    if((r.h4_modo||'hotel')==='retiro'){const admon=neto*0.1,fr=r.fee_resort_historico||0,resto=neto-admon-fr;items=[{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort hotel',v:-fr,t:'costo'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:resto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'}];}
+    else{const santi=r.santi_h4!=='no';items=santi?[{n:'Juan David Bridge (50%)',v:neto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:neto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:neto*0.25,t:'ingreso'}]:[{n:'Juan David Bridge (66.7%)',v:neto*0.667,t:'ingreso'},{n:'Sergio Arango (33.3%)',v:neto*0.333,t:'ingreso'}];}
   }
   return items;
+}
+
+function getSocioValor(r,socio){
+  if(r.pago_sapema!==null&&r.pago_sapema!==undefined){
+    if(socio==='Sergio Arango')return(r.pago_sapema||0)+(r.mng_fee||0);
+    if(socio==='Juan David Bridge')return r.pago_jdbj||0;
+    if(socio==='Santiago Arango')return r.pago_sar||0;
+    if(socio==='Nicolás Velásquez'&&r.prop==='M1'&&r.semana==='Nico')return(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
+    if(socio==='Alejandro Londoño'&&r.prop==='L3')return r.pago_jdbj||0;
+    return 0;
+  }
+  const items=getDistrib(r);
+  const match=items.filter(d=>d.t==='ingreso'&&d.n.includes(socio.split(' ')[0]));
+  return match.reduce((s,d)=>s+d.v,0);
 }
 
 async function guardarReserva(){
@@ -563,7 +564,6 @@ async function guardarReserva(){
   const bruto=parseFloat(document.getElementById('r-bruto').value)||0;
   if(!p||!t||!e||!s||bruto===0){showMsg('r-msg','Completa todos los campos obligatorios.','info');return;}
   const comision=parseFloat(document.getElementById('r-comision').value)||0;
-  const personas=parseInt(document.getElementById('r-personas').value)||1;
   const noches=getNights(e,s);
   const aseo=p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0;
   const semana=p==='M1'?document.getElementById('r-semana').value:null;
@@ -577,102 +577,68 @@ async function guardarReserva(){
   const btn=document.getElementById('btn-guardar');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
-    await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
+    await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
     showMsg('r-msg','Reserva guardada como Pendiente. Liquídala cuando cobres.','success');
     limpiarForm();await loadReservas();
   }catch(err){showMsg('r-msg','Error: '+err.message,'danger');}
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar reserva';}
 }
 
-// ---- LIQUIDACIÓN ----
 function abrirLiquidacion(id){
-  const r=reservas.find(x=>x.id===id);
-  if(!r)return;
+  const r=reservas.find(x=>x.id===id);if(!r)return;
   liquidandoId=id;liquidandoReserva=r;
   document.getElementById('modal-liq-sub').textContent=`${PROPS[r.prop].nombre} — ${r.huesped} — ${r.entrada}`;
-  const esBooking=r.tipo==='Booking';
-  const esFeeResort=(r.prop==='M1'&&r.semana==='Nico')||(r.prop==='H4'&&r.h4_modo==='retiro');
+  const esBooking=r.tipo==='Booking',esFeeResort=(r.prop==='M1'&&r.semana==='Nico')||(r.prop==='H4'&&r.h4_modo==='retiro');
   let html='';
-  if(esBooking){
-    const comAuto=round2((r.bruto||0)*0.18);
-    html+=`<div class="toggle-row"><span class="toggle-label">¿Confirmar comisión Booking 18%? <strong>${fmt(comAuto)}</strong></span><label class="toggle"><input type="checkbox" id="liq-booking" checked onchange="recalcLiq()"><span class="toggle-slider"></span></label></div>`;
-  }
+  if(esBooking){const comAuto=round2((r.bruto||0)*0.18);html+=`<div class="toggle-row"><span class="toggle-label">¿Confirmar comisión Booking 18%? <strong>${fmt(comAuto)}</strong></span><label class="toggle"><input type="checkbox" id="liq-booking" checked onchange="recalcLiq()"><span class="toggle-slider"></span></label></div>`;}
   html+=`<div class="toggle-row"><span class="toggle-label">¿Hubo pago con tarjeta BOLD?</span><label class="toggle"><input type="checkbox" id="liq-bold" onchange="recalcLiq()"><span class="toggle-slider"></span></label></div>`;
   html+=`<div id="liq-bold-monto" style="display:none;margin:8px 0"><div class="form-group"><label>Monto comisión BOLD (COP)</label><input type="number" id="liq-bold-val" placeholder="0" oninput="recalcLiq()"></div></div>`;
-  if(esFeeResort){
-    html+=`<div class="sep"></div><div class="form-group" style="margin-bottom:10px"><label>Fee resort — Temporada</label><select id="liq-fee-tipo" onchange="recalcLiq()"><option value="80000">Baja — $80.000/pers/noche</option><option value="100000">Alta — $100.000/pers/noche</option><option value="otro">Otro valor...</option></select></div>`;
-    html+=`<div id="liq-fee-custom-wrap" style="display:none" class="form-group" style="margin-bottom:10px"><label>Fee resort manual (total COP)</label><input type="number" id="liq-fee-custom" placeholder="0" oninput="recalcLiq()"></div>`;
-    html+=`<div class="form-group" style="margin-bottom:10px"><label>Fee resort calculado</label><input type="text" id="liq-fee-val" readonly></div>`;
-  }
+  if(esFeeResort){html+=`<div class="sep"></div><div class="form-group" style="margin-bottom:10px"><label>Fee resort — Temporada</label><select id="liq-fee-tipo" onchange="recalcLiq()"><option value="80000">Baja — $80.000/pers/noche</option><option value="100000">Alta — $100.000/pers/noche</option><option value="otro">Otro valor...</option></select></div>`;html+=`<div id="liq-fee-custom-wrap" style="display:none" class="form-group" style="margin-bottom:10px"><label>Fee resort manual (total COP)</label><input type="number" id="liq-fee-custom" placeholder="0" oninput="recalcLiq()"></div>`;html+=`<div class="form-group" style="margin-bottom:10px"><label>Fee resort calculado</label><input type="text" id="liq-fee-val" readonly></div>`;}
   html+=`<div class="sep"></div><div id="liq-distrib"></div>`;
   document.getElementById('modal-liq-body').innerHTML=html;
-  // Show bold monto on toggle
   const boldChk=document.getElementById('liq-bold');
-  if(boldChk) boldChk.addEventListener('change',()=>{document.getElementById('liq-bold-monto').style.display=boldChk.checked?'block':'none';recalcLiq();});
+  if(boldChk)boldChk.addEventListener('change',()=>{document.getElementById('liq-bold-monto').style.display=boldChk.checked?'block':'none';recalcLiq();});
   document.getElementById('modal-liq').classList.add('open');
   recalcLiq();
 }
 
 function recalcLiq(){
   const r=liquidandoReserva;if(!r)return;
-  const bruto=r.bruto||0;
-  const esBooking=r.tipo==='Booking';
-  const esFeeResort=(r.prop==='M1'&&r.semana==='Nico')||(r.prop==='H4'&&r.h4_modo==='retiro');
+  const bruto=r.bruto||0,esBooking=r.tipo==='Booking',esFeeResort=(r.prop==='M1'&&r.semana==='Nico')||(r.prop==='H4'&&r.h4_modo==='retiro');
   let comision=r.comision||0;
-  if(esBooking){
-    const chk=document.getElementById('liq-booking');
-    comision=chk&&chk.checked?round2(bruto*0.18):0;
-  }
-  let bold=0;
-  const boldChk=document.getElementById('liq-bold');
-  if(boldChk&&boldChk.checked) bold=parseFloat(document.getElementById('liq-bold-val').value)||0;
+  if(esBooking){const chk=document.getElementById('liq-booking');comision=chk&&chk.checked?round2(bruto*0.18):0;}
+  let bold=0;const boldChk=document.getElementById('liq-bold');
+  if(boldChk&&boldChk.checked)bold=parseFloat(document.getElementById('liq-bold-val').value)||0;
   let feeResort=r.fee_resort_historico||0;
-  if(esFeeResort){
-    const ft=document.getElementById('liq-fee-tipo');
-    if(ft){
-      if(ft.value==='otro'){
-        document.getElementById('liq-fee-custom-wrap').style.display='block';
-        feeResort=parseFloat(document.getElementById('liq-fee-custom').value)||0;
-      }else{
-        document.getElementById('liq-fee-custom-wrap').style.display='none';
-        feeResort=(r.noches||0)*(r.personas||1)*parseInt(ft.value);
-      }
-      document.getElementById('liq-fee-val').value=fmt(feeResort);
-    }
-  }
+  if(esFeeResort){const ft=document.getElementById('liq-fee-tipo');if(ft){if(ft.value==='otro'){document.getElementById('liq-fee-custom-wrap').style.display='block';feeResort=parseFloat(document.getElementById('liq-fee-custom').value)||0;}else{document.getElementById('liq-fee-custom-wrap').style.display='none';feeResort=(r.noches||0)*(r.personas||1)*parseInt(ft.value);}document.getElementById('liq-fee-val').value=fmt(feeResort);}}
   const neto=bruto-comision-bold;
   const rc={...r,comision,comision_pasarela:bold,neto,fee_resort_historico:feeResort};
   const items=getDistrib(rc);
-  // Separate socios from costs
   const costos=items.filter(d=>d.t==='costo'||d.t==='admon');
   const socios=items.filter(d=>d.t==='ingreso');
   let html='<div style="margin-bottom:12px">';
-  costos.forEach(d=>{const cls=d.t==='costo'?'val-red':'val-orange';html+=`<div class="distrib-row"><span class="distrib-name" style="color:var(--text-2)">${d.n}</span><span class="distrib-val ${cls}">${fmt(d.v)}</span></div>`;});
-  html+='</div>';
-  html+='<div class="distrib-highlight"><div class="distrib-highlight-title"><i class="ti ti-send"></i> Transferir a cada socio</div>';
+  costos.forEach(d=>{html+=`<div class="distrib-row"><span class="distrib-name" style="color:var(--text-2)">${d.n}</span><span class="distrib-val ${d.t==='costo'?'val-red':'val-orange'}">${fmt(d.v)}</span></div>`;});
+  html+='</div><div class="distrib-highlight"><div class="distrib-highlight-title"><i class="ti ti-send"></i> Transferir a cada socio</div>';
   socios.forEach(d=>{html+=`<div class="distrib-row"><span class="distrib-name" style="font-weight:500">${d.n}</span><span class="distrib-val val-green">${fmt(d.v)}</span></div>`;});
   html+='</div>';
   document.getElementById('liq-distrib').innerHTML=html;
-  // Store values for confirm
   window._liqData={comision,bold,feeResort,neto,socios,rc};
 }
 
 async function confirmarPago(){
   if(!liquidandoId||!window._liqData)return;
-  const {comision,bold,feeResort,neto,socios,rc}=window._liqData;
+  const{comision,bold,feeResort,neto,socios}=window._liqData;
   const pago_sapema=socios.find(s=>s.n.includes('Sergio'))?socios.find(s=>s.n.includes('Sergio')).v:0;
   const pago_jdbj=socios.find(s=>s.n.includes('Juan David'))?socios.find(s=>s.n.includes('Juan David')).v:0;
   const pago_sar=socios.find(s=>s.n.includes('Santiago'))?socios.find(s=>s.n.includes('Santiago')).v:0;
-  const mng_fee=neto*0.1;
   const btn=document.getElementById('btn-confirmar-pago');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
-    await supaFetch(`/rest/v1/reservas?id=eq.${liquidandoId}`,{method:'PATCH',body:JSON.stringify({estado_pago:'pagado',comision,comision_pasarela:bold,neto:round2(neto),fee_resort_historico:feeResort,pago_sapema:round2(pago_sapema),pago_jdbj:round2(pago_jdbj),pago_sar:round2(pago_sar),mng_fee:round2(mng_fee)})});
+    await supaFetch(`/rest/v1/reservas?id=eq.${liquidandoId}`,{method:'PATCH',body:JSON.stringify({estado_pago:'pagado',comision,comision_pasarela:bold,neto:round2(neto),fee_resort_historico:feeResort,pago_sapema:round2(pago_sapema),pago_jdbj:round2(pago_jdbj),pago_sar:round2(pago_sar),mng_fee:round2(neto*0.1)})});
     cerrarModal();await loadReservas();renderHistorial();
   }catch(err){showMsg('modal-msg','Error: '+err.message,'danger');}
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Confirmar pago';}
 }
-
 function cerrarModal(){document.getElementById('modal-liq').classList.remove('open');liquidandoId=null;liquidandoReserva=null;}
 
 function showMsg(elId,txt,tipo){
@@ -680,12 +646,9 @@ function showMsg(elId,txt,tipo){
   el.style.display='flex';el.className='alert alert-'+tipo;el.innerHTML='<i class="ti ti-'+(tipo==='success'?'check':'alert-circle')+'"></i>'+txt;
   if(tipo!=='danger')setTimeout(()=>{el.style.display='none';},3500);
 }
-
 function limpiarForm(){
   ['r-prop','r-tipo','r-huesped','r-entrada','r-salida','r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('r-personas').value='2';
-  document.getElementById('r-comision').value='';
-  document.getElementById('r-comision-display').value='';
+  document.getElementById('r-personas').value='2';document.getElementById('r-comision').value='';document.getElementById('r-comision-display').value='';
   ['x-m1','x-h4','x-go','x-fee-resort','x-l3-directo','distrib-box'].forEach(id=>document.getElementById(id).style.display='none');
 }
 
@@ -693,13 +656,8 @@ function renderDashboard(){
   document.getElementById('d-total').textContent=reservas.length;
   const brutoTotal=reservas.reduce((s,r)=>s+(r.bruto||0),0);
   const noches=reservas.reduce((s,r)=>s+(r.noches||0),0);
-  let sergio=0;
-  const byProp={GO:0,M1:0,L3:0,H4:0};
-  reservas.forEach(r=>{
-    byProp[r.prop]=(byProp[r.prop]||0)+(r.bruto||0);
-    if(r.pago_sapema)sergio+=r.pago_sapema+(r.mng_fee||0);
-    else getDistrib(r).forEach(d=>{if(d.n.includes('Sergio'))sergio+=d.v;});
-  });
+  let sergio=0;const byProp={GO:0,M1:0,L3:0,H4:0};
+  reservas.forEach(r=>{byProp[r.prop]=(byProp[r.prop]||0)+(r.bruto||0);if(r.pago_sapema)sergio+=r.pago_sapema+(r.mng_fee||0);else getDistrib(r).forEach(d=>{if(d.n.includes('Sergio'))sergio+=d.v;});});
   document.getElementById('d-bruto').textContent='$'+Math.round(brutoTotal/1000000)+'M';
   document.getElementById('d-sergio').textContent='$'+Math.round(sergio/1000000)+'M';
   document.getElementById('d-noches').textContent=noches;
@@ -733,38 +691,24 @@ function renderHistorial(){
   if(!lista.length){cont.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-3)">No hay reservas.</div>';return;}
   cont.innerHTML='<div class="table-wrap"><table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Tipo</th><th>Bruto</th><th>Neto</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
     lista.map(r=>{
-      const accion=r.estado_pago==='pendiente'||r.estado_pago==='abono'
-        ?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`
-        :`<span style="font-size:11px;color:var(--text-3)">—</span>`;
+      const accion=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`:`<span style="font-size:11px;color:var(--text-3)">—</span>`;
       return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml(r.estado_pago)}</td><td>${accion}</td></tr>`;
     }).join('')+'</tbody></table></div>';
 }
 
 function exportarExcel(){
   const fp=document.getElementById('f-prop').value,fe=document.getElementById('f-estado').value;
-  let lista=reservas;
-  if(fp)lista=lista.filter(r=>r.prop===fp);
-  if(fe)lista=lista.filter(r=>r.estado_pago===fe);
+  let lista=reservas;if(fp)lista=lista.filter(r=>r.prop===fp);if(fe)lista=lista.filter(r=>r.estado_pago===fe);
   const headers=['Propiedad','Huesped','Entrada','Salida','Noches','Tipo','Bruto','Comision','BOLD','Neto','Fee Resort','Admon Sergio','Pago JD Bridge','Pago Santiago','Estado'];
   const rows=lista.map(r=>[PROPS[r.prop].nombre,r.huesped||'',r.entrada||'',r.salida||'',r.noches||0,r.tipo,r.bruto||0,r.comision||0,r.comision_pasarela||0,r.neto||0,r.fee_resort_historico||0,r.mng_fee||0,r.pago_jdbj||0,r.pago_sar||0,r.estado_pago||'']);
   const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='Sapema_'+(fp||'todas')+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Sapema_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 
 function renderResumenSocios(){
   const socios={'Sergio Arango':0,'Juan David Bridge':0,'Nicolás Velásquez':0,'Alejandro Londoño':0,'Santiago Arango':0};
-  reservas.forEach(r=>{
-    if(r.pago_sapema!==null&&r.pago_sapema!==undefined){
-      socios['Sergio Arango']+=(r.pago_sapema||0)+(r.mng_fee||0);
-      socios['Juan David Bridge']+=(r.pago_jdbj||0);
-      socios['Santiago Arango']+=(r.pago_sar||0);
-      if(r.prop==='M1'&&r.semana==='Nico')socios['Nicolás Velásquez']+=(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
-      if(r.prop==='L3')socios['Alejandro Londoño']+=(r.pago_jdbj||0);
-    }
-  });
+  reservas.forEach(r=>{if(r.pago_sapema!==null&&r.pago_sapema!==undefined){socios['Sergio Arango']+=(r.pago_sapema||0)+(r.mng_fee||0);socios['Juan David Bridge']+=(r.pago_jdbj||0);socios['Santiago Arango']+=(r.pago_sar||0);if(r.prop==='M1'&&r.semana==='Nico')socios['Nicolás Velásquez']+=(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);if(r.prop==='L3')socios['Alejandro Londoño']+=(r.pago_jdbj||0);}});
   const avs={'Sergio Arango':['SA','#EAF2F8','var(--go)'],'Juan David Bridge':['JD','#FEF0E6','var(--orange)'],'Nicolás Velásquez':['NV','#E8F8F5','#148F77'],'Alejandro Londoño':['AL','var(--green-bg)','var(--green)'],'Santiago Arango':['StA','#F4ECF7','var(--h4)']};
   const entries=Object.entries(socios).filter(([,v])=>v!==0).sort((a,b)=>b[1]-a[1]);
   if(!entries.length){document.getElementById('resumen-socios').innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--text-3)">Sin datos.</div>';return;}
@@ -779,21 +723,90 @@ function renderPendientes(){
     lista.map(r=>`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${estadoHtml(r.estado_pago)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td><button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button></td></tr>`).join('')+'</tbody></table></div>';
 }
 
+// ---- REPORTES ----
+function initReporte(){
+  const hoy=new Date(),hace3m=new Date();hace3m.setMonth(hoy.getMonth()-3);
+  document.getElementById('rep-desde').value=hace3m.toISOString().slice(0,10);
+  document.getElementById('rep-hasta').value=hoy.toISOString().slice(0,10);
+}
+
+function getReservasSocio(socio,desde,hasta){
+  return reservas.filter(r=>{
+    if(!r.entrada)return false;
+    if(desde&&r.entrada<desde)return false;
+    if(hasta&&r.entrada>hasta)return false;
+    if(r.estado_pago==='no_paga')return false;
+    const val=getSocioValor(r,socio);
+    return val!==0;
+  });
+}
+
+function generarReporte(){
+  const socio=document.getElementById('rep-socio').value;
+  const desde=document.getElementById('rep-desde').value;
+  const hasta=document.getElementById('rep-hasta').value;
+  const lista=getReservasSocio(socio,desde,hasta);
+  const totalBruto=lista.reduce((s,r)=>s+(r.bruto||0),0);
+  const totalSocio=lista.reduce((s,r)=>s+getSocioValor(r,socio),0);
+  const totalNoches=lista.reduce((s,r)=>s+(r.noches||0),0);
+  const pendiente=lista.filter(r=>r.estado_pago==='pendiente'||r.estado_pago==='abono').reduce((s,r)=>s+getSocioValor(r,socio),0);
+  const pagado=totalSocio-pendiente;
+
+  document.getElementById('rep-header').innerHTML=`
+    <div class="reporte-logo">Sapema</div>
+    <div class="reporte-periodo">Reporte de gestión · ${desde} al ${hasta}</div>
+    <div class="reporte-socio">${socio}</div>`;
+
+  document.getElementById('rep-resumen').innerHTML=`
+    <div class="reporte-metric"><div class="reporte-metric-val">${fmt(totalSocio)}</div><div class="reporte-metric-label">Total a recibir</div></div>
+    <div class="reporte-metric"><div class="reporte-metric-val" style="color:var(--green)">${fmt(pagado)}</div><div class="reporte-metric-label">Ya pagado</div></div>
+    <div class="reporte-metric"><div class="reporte-metric-val" style="color:var(--orange)">${fmt(pendiente)}</div><div class="reporte-metric-label">Pendiente de pago</div></div>`;
+
+  document.getElementById('rep-tabla').innerHTML=lista.length?
+    '<table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Plataforma</th><th>Ingreso bruto</th><th>Tu parte</th><th>Estado</th></tr></thead><tbody>'+
+    lista.map(r=>`<tr><td>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--green)">${fmt(getSocioValor(r,socio))}</td><td>${estadoHtml(r.estado_pago)}</td></tr>`).join('')+'</tbody></table>':
+    '<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas en este período.</div>';
+
+  document.getElementById('rep-pagos').innerHTML=`
+    <div class="distrib-row"><span class="distrib-name">Reservas en el período</span><span class="distrib-val">${lista.length}</span></div>
+    <div class="distrib-row"><span class="distrib-name">Noches totales</span><span class="distrib-val">${totalNoches}</span></div>
+    <div class="distrib-row"><span class="distrib-name">Ingresos brutos propiedades</span><span class="distrib-val">${fmt(totalBruto)}</span></div>
+    <div class="distrib-row"><span class="distrib-name" style="font-weight:600">Total a recibir — ${socio}</span><span class="distrib-val val-green" style="font-size:15px">${fmt(totalSocio)}</span></div>
+    <div class="distrib-row"><span class="distrib-name">Ya pagado</span><span class="distrib-val val-green">${fmt(pagado)}</span></div>
+    <div class="distrib-row"><span class="distrib-name">Pendiente de transferencia</span><span class="distrib-val val-orange">${fmt(pendiente)}</span></div>`;
+
+  document.getElementById('reporte-contenido').style.display='block';
+}
+
+function descargarReporte(){
+  generarReporte();
+  const socio=document.getElementById('rep-socio').value;
+  const desde=document.getElementById('rep-desde').value;
+  const hasta=document.getElementById('rep-hasta').value;
+  const lista=getReservasSocio(socio,desde,hasta);
+  const totalSocio=lista.reduce((s,r)=>s+getSocioValor(r,socio),0);
+  const pendiente=lista.filter(r=>r.estado_pago==='pendiente'||r.estado_pago==='abono').reduce((s,r)=>s+getSocioValor(r,socio),0);
+  const headers=['Propiedad','Huesped','Entrada','Salida','Noches','Plataforma','Bruto','Tu parte','Estado'];
+  const rows=lista.map(r=>[PROPS[r.prop].nombre,r.huesped||'',r.entrada||'',r.salida||'',r.noches||0,r.tipo,r.bruto||0,getSocioValor(r,socio),r.estado_pago||'']);
+  rows.push([]);rows.push(['TOTAL','','','','','','',totalSocio,'']);rows.push(['PENDIENTE','','','','','','',pendiente,'']);
+  const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`Sapema_Reporte_${socio.replace(/ /g,'_')}_${desde}_${hasta}.csv`;a.click();
+}
+
 function renderCalendario(){
   const year=parseInt(document.getElementById('cal-year').value);
   const colores=['#F6A623','#85B7EB','#1E8449','#1A5276'];
   const props=['Juan David Bridge','Juan David Bridge','Nicolás Velásquez','Sergio Arango'];
-  let firstFri=new Date(year,0,1);
-  while(firstFri.getDay()!==5)firstFri.setDate(firstFri.getDate()+1);
+  let firstFri=new Date(year,0,1);while(firstFri.getDay()!==5)firstFri.setDate(firstFri.getDate()+1);
   let weeks=[],cur=new Date(firstFri),idx=0;
   while(cur.getFullYear()<=year){const s=new Date(cur),e=new Date(cur);e.setDate(e.getDate()+6);weeks.push({s,e,sem:(idx%4)+1,color:colores[idx%4],prop:props[idx%4]});cur.setDate(cur.getDate()+7);idx++;}
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const byM={};
-  weeks.filter(w=>w.s.getFullYear()===year).forEach(w=>{const m=w.s.getMonth();if(!byM[m])byM[m]=[];byM[m].push(w);});
+  const byM={};weeks.filter(w=>w.s.getFullYear()===year).forEach(w=>{const m=w.s.getMonth();if(!byM[m])byM[m]=[];byM[m].push(w);});
   const f2=d=>d.getDate()+'/'+(d.getMonth()+1);
   document.getElementById('cal-content').innerHTML=Object.entries(byM).map(([m,ws])=>
-    `<div class="cal-month">${meses[parseInt(m)]}</div>`+ws.map(w=>`<div class="cal-week"><span class="cal-dot" style="background:${w.color}"></span><span class="cal-sem">Sem ${w.sem}</span><span class="cal-dates">${f2(w.s)} → ${f2(w.e)}</span><span class="cal-prop">${w.prop}</span></div>`).join('')
-  ).join('');
+    `<div class="cal-month">${meses[parseInt(m)]}</div>`+ws.map(w=>`<div class="cal-week"><span class="cal-dot" style="background:${w.color}"></span><span class="cal-sem">Sem ${w.sem}</span><span class="cal-dates">${f2(w.s)} → ${f2(w.e)}</span><span class="cal-prop">${w.prop}</span></div>`).join('')).join('');
 }
 
 loadReservas();
