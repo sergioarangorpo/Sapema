@@ -231,12 +231,12 @@
       <div id="x-m1" style="display:none">
         <div class="form-grid">
           <div class="form-group"><label>Semana propietario</label>
-            <select id="r-semana" onchange="onTipoChange()">
+            <select id="r-semana" onchange="onSemanaChange()">
               <option value="bolsa">Bolsa común (sem 1, 2, 4)</option>
               <option value="Nico">Semana 3 — Nicolás Velásquez</option>
             </select>
           </div>
-          <div class="form-group"><label>¿Santiago aportó H4 este mes?</label>
+          <div class="form-group" id="x-santi-m1-wrap"><label>¿Santiago aportó H4 este mes?</label>
             <select id="r-santi-m1" onchange="calcDistrib()">
               <option value="si">Sí — participa en bolsa</option>
               <option value="no">No — solo JD y Sergio</option>
@@ -489,6 +489,13 @@ function onPropChange(){
   document.getElementById('x-go').style.display=p==='GO'?'block':'none';
   calcDistrib();
 }
+function onSemanaChange(){
+  const sem=document.getElementById('r-semana').value;
+  const santiWrap=document.getElementById('x-santi-m1-wrap');
+  if(sem==='Nico'){santiWrap.style.opacity='0.4';santiWrap.style.pointerEvents='none';document.getElementById('x-fee-resort').style.display='block';}
+  else{santiWrap.style.opacity='1';santiWrap.style.pointerEvents='auto';document.getElementById('x-fee-resort').style.display='none';}
+  calcDistrib();
+}
 function onTipoChange(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const sem=document.getElementById('r-semana')?document.getElementById('r-semana').value:'';
@@ -545,16 +552,25 @@ function getDistrib(r){
 }
 
 function getSocioValor(r,socio){
-  if(r.pago_sapema!==null&&r.pago_sapema!==undefined){
+  // For paid reservations with stored payment values
+  if(r.pago_sapema!==null&&r.pago_sapema!==undefined&&r.estado_pago==='pagado'){
     if(socio==='Sergio Arango')return(r.pago_sapema||0)+(r.mng_fee||0);
     if(socio==='Juan David Bridge')return r.pago_jdbj||0;
     if(socio==='Santiago Arango')return r.pago_sar||0;
     if(socio==='Nicolás Velásquez'&&r.prop==='M1'&&r.semana==='Nico')return(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
-    if(socio==='Alejandro Londoño'&&r.prop==='L3')return r.pago_jdbj||0;
+    if(socio==='Alejandro Londoño'&&r.prop==='L3'){
+      // Alejandro's value is stored in pago_jdbj for L3
+      if(r.pago_jdbj)return r.pago_jdbj;
+      // Fallback: calculate from neto
+      const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
+      if(r.tipo==='Directo'){const fee=neto*0.1;return(neto-fee)*0.5;}
+      return neto*0.5;
+    }
     return 0;
   }
+  // For historical data or non-paid: calculate from distribution
   const items=getDistrib(r);
-  const match=items.filter(d=>d.t==='ingreso'&&d.n.includes(socio.split(' ')[0]));
+  const match=items.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes(socio.split(' ')[0].toLowerCase()));
   return match.reduce((s,d)=>s+d.v,0);
 }
 
