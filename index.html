@@ -655,6 +655,15 @@ async function confirmarPago(){
   }catch(err){showMsg('modal-msg','Error: '+err.message,'danger');}
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Confirmar pago';}
 }
+async function cambiarEstado(id, nuevoEstado){
+  if(!nuevoEstado) return;
+  try {
+    await supaFetch(`/rest/v1/reservas?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({estado_pago: nuevoEstado})});
+    await loadReservas();
+    renderHistorial();
+  } catch(err) { alert('Error al cambiar estado: '+err.message); }
+}
+
 function cerrarModal(){document.getElementById('modal-liq').classList.remove('open');liquidandoId=null;liquidandoReserva=null;}
 
 function showMsg(elId,txt,tipo){
@@ -707,8 +716,15 @@ function renderHistorial(){
   if(!lista.length){cont.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-3)">No hay reservas.</div>';return;}
   cont.innerHTML='<div class="table-wrap"><table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Tipo</th><th>Bruto</th><th>Neto</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
     lista.map(r=>{
-      const accion=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`:`<span style="font-size:11px;color:var(--text-3)">—</span>`;
-      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml(r.estado_pago)}</td><td>${accion}</td></tr>`;
+      const liquidar=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`:'';
+      const cambiarEstado=`<select class="btn-estado-sel" onchange="cambiarEstado('${r.id}',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-left:4px;cursor:pointer;">
+        <option value="">Estado...</option>
+        <option value="pagado" ${r.estado_pago==='pagado'?'selected':''}>✅ Pagado</option>
+        <option value="pendiente" ${r.estado_pago==='pendiente'?'selected':''}>⏳ Pendiente</option>
+        <option value="abono" ${r.estado_pago==='abono'?'selected':''}>💰 Abono</option>
+        <option value="no_paga" ${r.estado_pago==='no_paga'?'selected':''}>🚫 No paga</option>
+      </select>`;
+      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${liquidar}${cambiarEstado}</td></tr>`;
     }).join('')+'</tbody></table></div>';
 }
 
