@@ -707,14 +707,36 @@ function renderDashboard(){
 
 function estadoHtml(e){const m={'pagado':'pagado','pendiente':'pendiente','abono':'abono','no_paga':'no paga'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;}
 
+let sortCol=null, sortDir=1;
+function sortHistorial(col){
+  if(sortCol===col) sortDir*=-1; else {sortCol=col;sortDir=1;}
+  renderHistorial();
+}
+
 function renderHistorial(){
   const fp=document.getElementById('f-prop').value,fe=document.getElementById('f-estado').value;
-  let lista=reservas;
+  let lista=reservas.filter(r=>r.estado_pago!==undefined);
   if(fp)lista=lista.filter(r=>r.prop===fp);
   if(fe)lista=lista.filter(r=>r.estado_pago===fe);
+
+  if(sortCol){
+    lista=[...lista].sort((a,b)=>{
+      let va=a[sortCol]||'', vb=b[sortCol]||'';
+      if(typeof va==='string') return va.localeCompare(vb)*sortDir;
+      return (va-vb)*sortDir;
+    });
+  }
+
   const cont=document.getElementById('historial-content');
   if(!lista.length){cont.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-3)">No hay reservas.</div>';return;}
-  cont.innerHTML='<div class="table-wrap"><table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Tipo</th><th>Bruto</th><th>Comisión</th><th>Neto</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
+
+  const th=(label,col)=>`<th style="cursor:pointer;user-select:none" onclick="sortHistorial('${col}')">${label} ${sortCol===col?(sortDir===1?'↑':'↓'):'↕'}</th>`;
+
+  const estadoHtml2=e=>{const m={'pagado':'pagado','pendiente':'pendiente','abono':'abono','no_paga':'no paga'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;};
+
+  cont.innerHTML='<div class="table-wrap"><table><thead><tr>'+
+    th('Propiedad','prop')+th('Huésped','huesped')+th('Entrada','entrada')+th('Noches','noches')+th('Tipo','tipo')+th('Bruto','bruto')+
+    '<th>Comisión</th>'+th('Neto','neto')+th('Estado','estado_pago')+'<th>Acción</th></tr></thead><tbody>'+
     lista.map(r=>{
       const comision=(r.comision||0)+(r.comision_pasarela||0);
       const liquidar=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`:'';
@@ -725,7 +747,7 @@ function renderHistorial(){
         <option value="abono" ${r.estado_pago==='abono'?'selected':''}>💰 Abono</option>
         <option value="no_paga" ${r.estado_pago==='no_paga'?'selected':''}>🚫 No paga</option>
       </select>`;
-      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${liquidar}${cambiarEstado}</td></tr>`;
+      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml2(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${liquidar}${cambiarEstado}</td></tr>`;
     }).join('')+'</tbody></table></div>';
 }
 
