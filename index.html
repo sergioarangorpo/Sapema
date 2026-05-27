@@ -714,17 +714,18 @@ function renderHistorial(){
   if(fe)lista=lista.filter(r=>r.estado_pago===fe);
   const cont=document.getElementById('historial-content');
   if(!lista.length){cont.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-3)">No hay reservas.</div>';return;}
-  cont.innerHTML='<div class="table-wrap"><table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Tipo</th><th>Bruto</th><th>Neto</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
+  cont.innerHTML='<div class="table-wrap"><table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Tipo</th><th>Bruto</th><th>Comisión</th><th>Neto</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
     lista.map(r=>{
+      const comision=(r.comision||0)+(r.comision_pasarela||0);
       const liquidar=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`:'';
-      const cambiarEstado=`<select class="btn-estado-sel" onchange="cambiarEstado('${r.id}',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-left:4px;cursor:pointer;">
+      const cambiarEstado=`<select onchange="cambiarEstado('${r.id}',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-left:4px;cursor:pointer;">
         <option value="">Estado...</option>
         <option value="pagado" ${r.estado_pago==='pagado'?'selected':''}>✅ Pagado</option>
         <option value="pendiente" ${r.estado_pago==='pendiente'?'selected':''}>⏳ Pendiente</option>
         <option value="abono" ${r.estado_pago==='abono'?'selected':''}>💰 Abono</option>
         <option value="no_paga" ${r.estado_pago==='no_paga'?'selected':''}>🚫 No paga</option>
       </select>`;
-      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${liquidar}${cambiarEstado}</td></tr>`;
+      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${liquidar}${cambiarEstado}</td></tr>`;
     }).join('')+'</tbody></table></div>';
 }
 
