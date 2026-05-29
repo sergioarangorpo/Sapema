@@ -162,9 +162,12 @@
         </select>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:20px;">
-      <button class="btn btn-primary" id="btn-edit-guardar" onclick="guardarEdicion()"><i class="ti ti-check"></i> Guardar cambios</button>
-      <button class="btn btn-secondary" onclick="cerrarModalEdit()">Cancelar</button>
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:space-between;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="btn-edit-guardar" onclick="guardarEdicion()"><i class="ti ti-check"></i> Guardar cambios</button>
+        <button class="btn btn-secondary" onclick="cerrarModalEdit()">Cancelar</button>
+      </div>
+      <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid #f5c6c6" onclick="eliminarReserva()"><i class="ti ti-trash"></i> Eliminar reserva</button>
     </div>
     <div id="edit-msg" style="display:none"></div>
   </div>
@@ -784,6 +787,16 @@ async function guardarEdicion(){
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar cambios';}
 }
 
+async function eliminarReserva(){
+  if(!editandoId)return;
+  const r=reservas.find(x=>x.id===editandoId);
+  if(!confirm(`¿Eliminar la reserva de ${r?.huesped||'este huésped'}? Esta acción no se puede deshacer.`))return;
+  try{
+    await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'DELETE'});
+    cerrarModalEdit();await loadReservas();renderHistorial();
+  }catch(err){showMsg('edit-msg','Error al eliminar: '+err.message,'danger');}
+}
+
 function cerrarModalEdit(){document.getElementById('modal-edit').classList.remove('open');editandoId=null;}
 
 function showMsg(elId,txt,tipo){
@@ -900,6 +913,12 @@ function renderPendientes(){
 }
 
 // ---- REPORTES ----
+let naioSortCol='entrada', naioSortDir=1;
+function sortNaio(col){
+  if(naioSortCol===col) naioSortDir*=-1; else {naioSortCol=col;naioSortDir=1;}
+  generarCalNaio();
+}
+
 function generarCalNaio(){
   const mes=parseInt(document.getElementById('naio-mes').value);
   const anio=parseInt(document.getElementById('naio-anio').value);
@@ -907,19 +926,21 @@ function generarCalNaio(){
   const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
   const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
   const propsPalomino=['M1','L3','H4'];
-  const lista=reservas.filter(r=>{
+  let lista=reservas.filter(r=>{
     if(!propsPalomino.includes(r.prop)) return false;
     if(!r.entrada) return false;
-    // Include if checkin is in the month OR checkout is in the month OR spans the month
     const e=r.entrada, s=r.salida||r.entrada;
     return e<=fin && s>=inicio;
-  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
-
+  });
+  lista=[...lista].sort((a,b)=>{
+    if(naioSortCol==='noches'||naioSortCol==='personas') return ((a[naioSortCol]||0)-(b[naioSortCol]||0))*naioSortDir;
+    return ((a[naioSortCol]||'').localeCompare(b[naioSortCol]||''))*naioSortDir;
+  });
   const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
-
+  const th=(label,col)=>`<th style="cursor:pointer;user-select:none" onclick="sortNaio('${col}')">${label} ${naioSortCol===col?(naioSortDir===1?'↑':'↓'):'↕'}</th>`;
   document.getElementById('naio-titulo').textContent=`Reservas ${meses[mes-1]} ${anio} — ${lista.length} reserva(s)`;
   document.getElementById('naio-tabla').innerHTML=lista.length?
-    '<table><thead><tr><th>Check In</th><th>Check Out</th><th>Noches</th><th>Huésped</th><th>Personas</th><th>Villa</th></tr></thead><tbody>'+
+    '<table><thead><tr>'+th('Check In','entrada')+th('Check Out','salida')+th('Noches','noches')+th('Huésped','huesped')+th('Personas','personas')+th('Villa','prop')+'</tr></thead><tbody>'+
     lista.map(r=>`<tr><td>${r.entrada}</td><td>${r.salida||'—'}</td><td>${r.noches||0}</td><td>${r.huesped||'—'}</td><td>${r.personas||'—'}</td><td>${nombreVilla(r.prop)}</td></tr>`).join('')+
     '</tbody></table>':
     '<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
