@@ -134,7 +134,41 @@
 </head>
 <body>
 
-<!-- MODAL LIQUIDACIÓN -->
+<!-- MODAL EDITAR RESERVA -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-pencil"></i> Editar reserva</div>
+    <div class="modal-sub" id="modal-edit-sub"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Fecha entrada</label><input type="date" id="edit-entrada"></div>
+      <div class="form-group"><label>Fecha salida</label><input type="date" id="edit-salida"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Huésped</label><input type="text" id="edit-huesped" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="form-group"><label>N° personas</label><input type="number" id="edit-personas" min="1"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Valor bruto (COP)</label><input type="number" id="edit-bruto"></div>
+      <div class="form-group"><label>Comisión plataforma (COP)</label><input type="number" id="edit-comision"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Comisión BOLD (COP)</label><input type="number" id="edit-bold"></div>
+      <div class="form-group"><label>Estado</label>
+        <select id="edit-estado">
+          <option value="pagado">✅ Pagado</option>
+          <option value="pendiente">⏳ Pendiente</option>
+          <option value="abono">💰 Abono</option>
+          <option value="no_paga">🚫 No paga</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-primary" id="btn-edit-guardar" onclick="guardarEdicion()"><i class="ti ti-check"></i> Guardar cambios</button>
+      <button class="btn btn-secondary" onclick="cerrarModalEdit()">Cancelar</button>
+    </div>
+    <div id="edit-msg" style="display:none"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-liq">
   <div class="modal">
     <div class="modal-title"><i class="ti ti-coin"></i> Liquidar reserva</div>
@@ -713,6 +747,45 @@ async function cambiarEstado(id, nuevoEstado){
 
 function cerrarModal(){document.getElementById('modal-liq').classList.remove('open');liquidandoId=null;liquidandoReserva=null;}
 
+let editandoId=null;
+function abrirEdicion(id){
+  const r=reservas.find(x=>x.id===id);if(!r)return;
+  editandoId=id;
+  document.getElementById('modal-edit-sub').textContent=`${PROPS[r.prop].nombre} — ${r.tipo}`;
+  document.getElementById('edit-entrada').value=r.entrada||'';
+  document.getElementById('edit-salida').value=r.salida||'';
+  document.getElementById('edit-huesped').value=r.huesped||'';
+  document.getElementById('edit-personas').value=r.personas||2;
+  document.getElementById('edit-bruto').value=r.bruto||0;
+  document.getElementById('edit-comision').value=r.comision||0;
+  document.getElementById('edit-bold').value=r.comision_pasarela||0;
+  document.getElementById('edit-estado').value=r.estado_pago||'pendiente';
+  document.getElementById('modal-edit').classList.add('open');
+}
+
+async function guardarEdicion(){
+  if(!editandoId)return;
+  const entrada=document.getElementById('edit-entrada').value;
+  const salida=document.getElementById('edit-salida').value;
+  const huesped=document.getElementById('edit-huesped').value;
+  const personas=parseInt(document.getElementById('edit-personas').value)||1;
+  const bruto=parseFloat(document.getElementById('edit-bruto').value)||0;
+  const comision=parseFloat(document.getElementById('edit-comision').value)||0;
+  const bold=parseFloat(document.getElementById('edit-bold').value)||0;
+  const estado=document.getElementById('edit-estado').value;
+  const noches=getNights(entrada,salida);
+  const neto=round2(bruto-comision-bold);
+  const btn=document.getElementById('btn-edit-guardar');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
+  try{
+    await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'PATCH',body:JSON.stringify({entrada,salida,huesped,personas,bruto,comision,comision_pasarela:bold,neto,noches,estado_pago:estado})});
+    cerrarModalEdit();await loadReservas();renderHistorial();
+  }catch(err){showMsg('edit-msg','Error: '+err.message,'danger');}
+  finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar cambios';}
+}
+
+function cerrarModalEdit(){document.getElementById('modal-edit').classList.remove('open');editandoId=null;}
+
 function showMsg(elId,txt,tipo){
   const el=document.getElementById(elId);
   el.style.display='flex';el.className='alert alert-'+tipo;el.innerHTML='<i class="ti ti-'+(tipo==='success'?'check':'alert-circle')+'"></i>'+txt;
@@ -787,6 +860,7 @@ function renderHistorial(){
     lista.map(r=>{
       const comision=(r.comision||0)+(r.comision_pasarela||0);
       const liquidar=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button>`:'';
+      const editar=`<button class="btn btn-secondary btn-sm" onclick="abrirEdicion('${r.id}')" title="Editar"><i class="ti ti-pencil"></i></button>`;
       const cambiarEstado=`<select onchange="cambiarEstado('${r.id}',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-left:4px;cursor:pointer;">
         <option value="">Estado...</option>
         <option value="pagado" ${r.estado_pago==='pagado'?'selected':''}>✅ Pagado</option>
@@ -794,7 +868,7 @@ function renderHistorial(){
         <option value="abono" ${r.estado_pago==='abono'?'selected':''}>💰 Abono</option>
         <option value="no_paga" ${r.estado_pago==='no_paga'?'selected':''}>🚫 No paga</option>
       </select>`;
-      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml2(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${liquidar}${cambiarEstado}</td></tr>`;
+      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml2(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${editar}${liquidar}${cambiarEstado}</td></tr>`;
     }).join('')+'</tbody></table></div>';
 }
 
