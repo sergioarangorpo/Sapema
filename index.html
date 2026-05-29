@@ -601,7 +601,6 @@ async function guardarReserva(){
   const neto=round2(bruto-comision);
   let feeResort=0;
   if((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro'))feeResort=getFeeResort();
-  const btn=document.getElementById('btn-guardar');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
     await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
