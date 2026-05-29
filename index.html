@@ -453,8 +453,14 @@ const TIPOS={GO:['Airbnb'],M1:['Airbnb','Booking','Directo'],L3:['Airbnb','Booki
 
 async function supaFetch(path,opts={}){
   const res=await fetch(SUPA_URL+path,{headers:HEADERS,...opts});
-  if(!res.ok)throw new Error(await res.text());
-  return res.status===204?null:res.json();
+  if(!res.ok){
+    const txt=await res.text();
+    throw new Error(txt||'Error '+res.status);
+  }
+  if(res.status===204||res.headers.get('content-length')==='0') return null;
+  const txt=await res.text();
+  if(!txt||txt.trim()==='') return null;
+  return JSON.parse(txt);
 }
 async function loadReservas(){
   try{
