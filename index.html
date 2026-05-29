@@ -390,8 +390,40 @@
 
   <!-- REPORTES -->
   <div id="section-reportes" class="section">
+
+    <!-- CALENDARIO NAIO -->
     <div class="card">
-      <div class="card-title"><i class="ti ti-file-text"></i> Generar reporte de gestión</div>
+      <div class="card-title"><i class="ti ti-calendar-event"></i> Calendario mensual — Naio Palomino</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Mes</label>
+          <select id="naio-mes">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Año</label>
+          <select id="naio-anio">
+            <option value="2026">2026</option><option value="2027">2027</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="generarCalNaio()"><i class="ti ti-eye"></i> Ver calendario</button>
+        <button class="btn btn-secondary" onclick="descargarCalNaio()"><i class="ti ti-download"></i> Descargar Excel</button>
+        <button class="btn btn-blue" onclick="enviarNaio()"><i class="ti ti-send"></i> Enviar a Naio por correo</button>
+      </div>
+      <div id="naio-contenido" style="display:none;margin-top:16px;">
+        <div class="sep"></div>
+        <div id="naio-titulo" style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-2)"></div>
+        <div class="table-wrap"><div id="naio-tabla"></div></div>
+      </div>
+    </div>
+
+    <!-- REPORTE DE GESTIÓN -->
+    <div class="card">
+      <div class="card-title"><i class="ti ti-file-text"></i> Reporte de gestión por socio</div>
       <div class="form-grid-3">
         <div class="form-group"><label>Socio</label>
           <select id="rep-socio">
@@ -605,6 +637,11 @@ async function guardarReserva(){
   try{
     await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
     showMsg('r-msg','Reserva guardada como Pendiente. Liquídala cuando cobres.','success');
+    // Show send to Naio button for Palomino properties
+    if(['M1','L3','H4'].includes(p)){
+      const msgEl=document.getElementById('r-msg');
+      msgEl.innerHTML+=' <button class="btn btn-blue btn-sm" style="margin-left:8px" onclick="enviarReservaNaio(\''+h+'\',\''+e+'\',\''+s+'\','+noches+',\''+p+'\')"><i class="ti ti-send"></i> Notificar a Naio</button>';
+    }
     limpiarForm();await loadReservas();
   }catch(err){showMsg('r-msg','Error: '+err.message,'danger');}
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar reserva';}
@@ -789,6 +826,90 @@ function renderPendientes(){
 }
 
 // ---- REPORTES ----
+function generarCalNaio(){
+  const mes=parseInt(document.getElementById('naio-mes').value);
+  const anio=parseInt(document.getElementById('naio-anio').value);
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+  const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
+  const propsPalomino=['M1','L3','H4'];
+  const lista=reservas.filter(r=>{
+    if(!propsPalomino.includes(r.prop)) return false;
+    if(!r.entrada) return false;
+    // Include if checkin is in the month OR checkout is in the month OR spans the month
+    const e=r.entrada, s=r.salida||r.entrada;
+    return e<=fin && s>=inicio;
+  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
+
+  const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
+
+  document.getElementById('naio-titulo').textContent=`Reservas ${meses[mes-1]} ${anio} — ${lista.length} reserva(s)`;
+  document.getElementById('naio-tabla').innerHTML=lista.length?
+    '<table><thead><tr><th>Check In</th><th>Check Out</th><th>Noches</th><th>Huésped</th><th>Personas</th><th>Villa</th></tr></thead><tbody>'+
+    lista.map(r=>`<tr><td>${r.entrada}</td><td>${r.salida||'—'}</td><td>${r.noches||0}</td><td>${r.huesped||'—'}</td><td>${r.personas||'—'}</td><td>${nombreVilla(r.prop)}</td></tr>`).join('')+
+    '</tbody></table>':
+    '<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
+  document.getElementById('naio-contenido').style.display='block';
+}
+
+function descargarCalNaio(){
+  generarCalNaio();
+  const mes=parseInt(document.getElementById('naio-mes').value);
+  const anio=parseInt(document.getElementById('naio-anio').value);
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+  const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
+  const propsPalomino=['M1','L3','H4'];
+  const lista=reservas.filter(r=>{
+    if(!propsPalomino.includes(r.prop)) return false;
+    if(!r.entrada) return false;
+    const e=r.entrada,s=r.salida||r.entrada;
+    return e<=fin&&s>=inicio;
+  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
+  const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
+  const headers=['CHECK IN','CHECK OUT','NOCHES','NOMBRE HUESPED','CANTIDAD HUESPEDES','VILLA'];
+  const rows=lista.map(r=>[r.entrada,r.salida||'',r.noches||0,r.huesped||'',r.personas||0,nombreVilla(r.prop)]);
+  const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`Calendario_Naio_${meses[mes-1]}_${anio}.csv`;a.click();
+}
+
+function enviarNaio(){
+  generarCalNaio();
+  const mes=parseInt(document.getElementById('naio-mes').value);
+  const anio=parseInt(document.getElementById('naio-anio').value);
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+  const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
+  const propsPalomino=['M1','L3','H4'];
+  const lista=reservas.filter(r=>{
+    if(!propsPalomino.includes(r.prop)) return false;
+    if(!r.entrada) return false;
+    const e=r.entrada,s=r.salida||r.entrada;
+    return e<=fin&&s>=inicio;
+  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
+  const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
+  const to='reservasnaio@oxohotel.com';
+  const cc='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
+  const subject=`Calendario reservas ${meses[mes-1]} ${anio} — Villas Naio`;
+  let body=`Estimado equipo Naio,\n\nAdjunto el calendario de reservas para ${meses[mes-1]} ${anio}:\n\n`;
+  body+=`CHECK IN\t\tCHECK OUT\t\tNOCHES\tHUESPED\t\t\t\tPERSONAS\tVILLA\n`;
+  body+=`${'─'.repeat(80)}\n`;
+  lista.forEach(r=>{body+=`${r.entrada}\t\t${r.salida||'—'}\t\t${r.noches||0}\t${(r.huesped||'—').padEnd(20)}\t${r.personas||0}\t\t${nombreVilla(r.prop)}\n`;});
+  body+=`\n${'─'.repeat(80)}\nTotal: ${lista.length} reserva(s)\n\nSaludos,\nSergio Arango\nSapema`;
+  window.location.href=`mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function enviarReservaNaio(huesped,entrada,salida,noches,prop){
+  const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
+  const to='reservasnaio@oxohotel.com';
+  const cc='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
+  const subject=`Nueva reserva ${nombreVilla(prop)} — ${huesped} — Check in ${entrada}`;
+  const body=`Estimado equipo Naio,\n\nLes informo una nueva reserva:\n\nVilla: ${nombreVilla(prop)}\nHuésped: ${huesped}\nCheck In: ${entrada}\nCheck Out: ${salida}\nNoches: ${noches}\n\nSaludos,\nSergio Arango\nSapema`;
+  window.location.href=`mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 function initReporte(){
   const hoy=new Date(),hace3m=new Date();hace3m.setMonth(hoy.getMonth()-3);
   document.getElementById('rep-desde').value=hace3m.toISOString().slice(0,10);
