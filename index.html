@@ -201,6 +201,7 @@
     <button class="nav-btn" onclick="showSection('historial',this)"><i class="ti ti-list"></i> Historial</button>
     <button class="nav-btn" onclick="showSection('socios',this)"><i class="ti ti-users"></i> Socios</button>
     <button class="nav-btn" onclick="showSection('reportes',this)"><i class="ti ti-file-text"></i> Reportes</button>
+    <button class="nav-btn" onclick="showSection('calendario',this)"><i class="ti ti-calendar"></i> Disponibilidad</button>
     <button class="nav-btn" onclick="showSection('semanas',this)"><i class="ti ti-calendar-week"></i> Semanas M1</button>
   </div>
 
@@ -610,6 +611,36 @@
     </div>
   </div>
 
+  <!-- DISPONIBILIDAD -->
+  <div id="section-calendario" class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;font-weight:600;">Disponibilidad de villas</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="cal-mes" onchange="renderDisponibilidad()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+          <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+        <select id="cal-anio" onchange="renderDisponibilidad()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="2026">2026</option><option value="2027">2027</option>
+        </select>
+      </div>
+    </div>
+    <!-- Leyenda -->
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;">
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#E8F5E9;border:1px solid #A5D6A7;display:inline-block"></span>Disponible</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#FFEBEE;border:1px solid #EF9A9A;display:inline-block"></span>Ocupado</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#FFF3E0;border:1px solid #FFCC80;display:inline-block"></span>Uso socio</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#E3F2FD;border:1px solid #90CAF9;display:inline-block"></span>Disponible H4 (sem 2)</div>
+    </div>
+    <div class="prop-grid">
+      <div class="card"><div class="card-title"><span class="prop-dot" style="background:var(--m1);display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>Villa M1 — Palomino</div><div id="cal-m1"></div></div>
+      <div class="card"><div class="card-title"><span class="prop-dot" style="background:var(--l3);display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>Villa L3 — Palomino</div><div id="cal-l3"></div></div>
+      <div class="card" style="grid-column:1/-1"><div class="card-title"><span class="prop-dot" style="background:var(--h4);display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>Villa H4 — Palomino (semanas disponibles para alquiler directo)</div><div id="cal-h4"></div></div>
+    </div>
+  </div>
+
   <!-- SEMANAS M1 -->
   <div id="section-semanas" class="section">
     <div class="card">
@@ -670,6 +701,7 @@ function showSection(id,btn){
   if(id==='historial')renderHistorial();
   if(id==='dashboard')renderDashboard();
   if(id==='reportes')initReporte();
+  if(id==='calendario'){initCalendario();renderDisponibilidad();}
 }
 
 function onPropChange(){
@@ -1418,7 +1450,7 @@ function renderHistorial(){
         <option value="abono" ${r.estado_pago==='abono'?'selected':''}>💰 Abono</option>
         <option value="no_paga" ${r.estado_pago==='no_paga'?'selected':''}>🚫 No paga</option>
       </select>`;
-      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml2(r.estado_pago)}</td><td style="display:flex;gap:4px;align-items:center">${editar}${liquidar}${cambiarEstado}</td></tr>`;
+      return`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td><td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td><td>${estadoHtml2(r.estado_pago)}</td><td style="min-width:180px"><div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">${editar}${liquidar}${cambiarEstado}</div></td></tr>`;
     }).join('')+'</tbody></table></div>';
 }
 
@@ -1613,7 +1645,182 @@ function descargarReporte(){
   a.download=`Sapema_Reporte_${socio.replace(/ /g,'_')}_${desde}_${hasta}.csv`;a.click();
 }
 
-function renderCalendario(){
+function initCalendario(){
+  const now=new Date();
+  document.getElementById('cal-mes').value=now.getMonth()+1;
+  document.getElementById('cal-anio').value=now.getFullYear();
+}
+
+function renderDisponibilidad(){
+  const mes=parseInt(document.getElementById('cal-mes').value);
+  const anio=parseInt(document.getElementById('cal-anio').value);
+  renderCalMes('M1', mes, anio, 'cal-m1');
+  renderCalMes('L3', mes, anio, 'cal-l3');
+  renderCalH4(mes, anio, 'cal-h4');
+}
+
+function renderCalMes(prop, mes, anio, elId){
+  const diasMes=new Date(anio,mes,0).getDate();
+  const primerDia=new Date(anio,mes-1,1).getDay(); // 0=domingo
+  const diasSem=['D','L','M','M','J','V','S'];
+
+  // Get occupied days from reservas
+  const ocupados={};
+  const mesStr=`${anio}-${String(mes).padStart(2,'0')}`;
+  reservas.filter(r=>r.prop===prop).forEach(r=>{
+    if(!r.entrada||!r.salida) return;
+    const e=new Date(r.entrada+'T12:00:00');
+    const s=new Date(r.salida+'T12:00:00');
+    let cur=new Date(e);
+    while(cur<s){
+      const ds=cur.toISOString().slice(0,10);
+      if(ds.startsWith(mesStr)){
+        const dia=cur.getDate();
+        ocupados[dia]={
+          tipo: r.estado_pago==='no_paga'?'socio':'ocupado',
+          huesped: r.huesped||'',
+          entrada: r.entrada,
+          salida: r.salida
+        };
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+  });
+
+  let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">';
+  // Header
+  diasSem.forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:600;color:var(--text-3);padding:4px 0;">${d}</div>`);
+  // Empty cells before first day
+  const offset=primerDia===0?6:primerDia-1; // Start on Monday
+  for(let i=0;i<offset;i++) html+=`<div></div>`;
+  // Days
+  for(let d=1;d<=diasMes;d++){
+    const info=ocupados[d];
+    let bg='#E8F5E9', border='#A5D6A7', color='#2D6A4F';
+    let title='Disponible';
+    if(info){
+      if(info.tipo==='socio'){bg='#FFF3E0';border='#FFCC80';color='#E65100';title=`Uso socio: ${info.huesped}`;}
+      else{bg='#FFEBEE';border='#EF9A9A';color='#C62828';title=`${info.huesped}\n${info.entrada} → ${info.salida}`;}
+    }
+    html+=`<div title="${title}" style="text-align:center;padding:6px 2px;font-size:11px;font-weight:500;border-radius:4px;background:${bg};border:1px solid ${border};color:${color};cursor:default;">${d}</div>`;
+  }
+  html+='</div>';
+
+  // Add reservation list below
+  const resDelMes=reservas.filter(r=>{
+    if(r.prop!==prop||!r.entrada) return false;
+    const e=r.entrada,s=r.salida||r.entrada;
+    const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+    const fin=`${anio}-${String(mes).padStart(2,'0')}-${String(diasMes).padStart(2,'0')}`;
+    return e<=fin&&s>=inicio;
+  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
+
+  if(resDelMes.length){
+    html+=`<div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:10px;">`;
+    resDelMes.forEach(r=>{
+      const isNoPaga=r.estado_pago==='no_paga';
+      const color=isNoPaga?'var(--orange)':'var(--text)';
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:11px;">
+        <span style="font-weight:500;color:${color}">${r.huesped||'—'}</span>
+        <span style="color:var(--text-3)">${r.entrada} → ${r.salida||'?'} (${r.noches||0}n)</span>
+      </div>`;
+    });
+    html+='</div>';
+  } else {
+    html+=`<div style="text-align:center;padding:12px;color:var(--text-3);font-size:12px;margin-top:8px">Sin reservas este mes</div>`;
+  }
+
+  document.getElementById(elId).innerHTML=html;
+}
+
+function renderCalH4(mes, anio, elId){
+  // H4: show weeks where sem=2 (available for direct rental)
+  // Use calendar logic to find sem 2 weeks
+  const startIdx={2026:1,2027:2};
+  const idx0=startIdx[anio]!==undefined?startIdx[anio]:0;
+  let firstFri=new Date(anio,0,1);
+  while(firstFri.getDay()!==5)firstFri.setDate(firstFri.getDate()+1);
+
+  const weeks=[];
+  let cur=new Date(firstFri),idx=idx0;
+  while(cur.getFullYear()<=anio){
+    const s=new Date(cur),e=new Date(cur);
+    e.setDate(e.getDate()+6);
+    weeks.push({s,e,semIdx:idx%4});
+    cur.setDate(cur.getDate()+7);idx++;
+  }
+
+  // Filter weeks that overlap with the selected month
+  const inicio=new Date(anio,mes-1,1);
+  const fin=new Date(anio,mes,0);
+  const diasMes=fin.getDate();
+
+  // Get H4 reservations (retiro) for this month
+  const mesStr=`${anio}-${String(mes).padStart(2,'0')}`;
+  const h4Ocupados={};
+  reservas.filter(r=>r.prop==='H4'&&r.h4_modo==='retiro').forEach(r=>{
+    if(!r.entrada||!r.salida) return;
+    const e=new Date(r.entrada+'T12:00:00');
+    const s=new Date(r.salida+'T12:00:00');
+    let c=new Date(e);
+    while(c<s){
+      const ds=c.toISOString().slice(0,10);
+      if(ds.startsWith(mesStr)) h4Ocupados[c.getDate()]={huesped:r.huesped||''};
+      c.setDate(c.getDate()+1);
+    }
+  });
+
+  // Build calendar with week context
+  const primerDia=inicio.getDay();
+  const offset=primerDia===0?6:primerDia-1;
+  const diasSem=['D','L','M','M','J','V','S'];
+
+  // Map each day to its week owner
+  const dayOwner={};
+  weeks.filter(w=>w.s<=fin&&w.e>=inicio).forEach(w=>{
+    let c=new Date(Math.max(w.s,inicio));
+    const wEnd=new Date(Math.min(w.e,fin));
+    while(c<=wEnd){
+      if(c.getMonth()===mes-1) dayOwner[c.getDate()]=w.semIdx;
+      c.setDate(c.getDate()+1);
+    }
+  });
+
+  let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">';
+  diasSem.forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:600;color:var(--text-3);padding:4px 0;">${d}</div>`);
+  for(let i=0;i<offset;i++) html+=`<div></div>`;
+
+  for(let d=1;d<=diasMes;d++){
+    const semIdx=dayOwner[d];
+    const isOcupado=h4Ocupados[d];
+    // semIdx===1 means Sem2 (available for H4 direct rental)
+    let bg='#F5F5F5',border='#E0E0E0',color='#9E9E9E',title='Hotel — no disponible';
+    if(isOcupado){bg='#FFEBEE';border='#EF9A9A';color='#C62828';title=`Ocupado: ${isOcupado.huesped}`;}
+    else if(semIdx===1){bg='#E3F2FD';border='#90CAF9';color='#1565C0';title='Disponible — Semana 2 (puedes alquilar directo)';}
+    html+=`<div title="${title}" style="text-align:center;padding:6px 2px;font-size:11px;font-weight:500;border-radius:4px;background:${bg};border:1px solid ${border};color:${color};cursor:default;">${d}</div>`;
+  }
+  html+='</div>';
+
+  // List available weeks
+  const semsDisp=weeks.filter(w=>w.semIdx===1&&w.s<=fin&&w.e>=inicio);
+  if(semsDisp.length){
+    html+=`<div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px">Semanas disponibles para alquiler directo:</div>`;
+    const f=d=>`${d.getDate()}/${d.getMonth()+1}`;
+    semsDisp.forEach(w=>{
+      const isRes=reservas.find(r=>r.prop==='H4'&&r.h4_modo==='retiro'&&r.entrada<=w.e.toISOString().slice(0,10)&&r.salida>=w.s.toISOString().slice(0,10));
+      html+=`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:11px;">
+        <span style="color:var(--blue);font-weight:500">${f(w.s)} → ${f(w.e)}</span>
+        <span style="color:${isRes?'var(--red)':'var(--green)'}">${isRes?'Reservado: '+isRes.huesped:'Disponible'}</span>
+      </div>`;
+    });
+    html+='</div>';
+  } else {
+    html+=`<div style="text-align:center;padding:12px;color:var(--text-3);font-size:12px;margin-top:8px">No hay semanas disponibles (sem 2) este mes</div>`;
+  }
+
+  document.getElementById(elId).innerHTML=html;
+}
   const year=parseInt(document.getElementById('cal-year').value);
   // Colors and owners per semester index (0=Sem1, 1=Sem2, 2=Sem3, 3=Sem4)
   const colores=['#F6A623','#85B7EB','#1E8449','#1A5276'];
