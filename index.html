@@ -265,8 +265,31 @@
           <select id="r-tipo" onchange="onTipoChange()"><option value="">Seleccionar...</option></select>
         </div>
       </div>
-      <div id="x-m1" style="display:none">
+      <!-- FECHAS - siempre visibles después de propiedad/plataforma -->
+      <div class="form-grid">
+        <div class="form-group"><label>Fecha entrada</label><input type="date" id="r-entrada" oninput="calcDistrib()"></div>
+        <div class="form-group"><label>Fecha salida</label><input type="date" id="r-salida" oninput="calcDistrib()"></div>
+      </div>
+      <!-- H4 extras -->
+      <div id="x-h4" style="display:none">
         <div class="form-grid">
+          <div class="form-group"><label>Modo H4</label>
+            <select id="r-h4-modo" onchange="onTipoChange()">
+              <option value="hotel">Hotel — ingreso trimestral</option>
+              <option value="retiro">Retiro — alquiler directo</option>
+            </select>
+          </div>
+          <div class="form-group"><label>¿Santiago aportó H4 este período?</label>
+            <select id="r-santi-h4" onchange="calcDistrib()">
+              <option value="si">Sí — participa</option>
+              <option value="no">No — no participa</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <!-- M1 extras - semana y Santiago (solo para no-cruzada) -->
+      <div id="x-m1" style="display:none">
+        <div class="form-grid" id="x-m1-normal">
           <div class="form-group"><label>Semana propietario</label>
             <select id="r-semana" onchange="onSemanaChange()">
               <option value="bolsa">Bolsa común (sem 1, 2, 4)</option>
@@ -280,7 +303,7 @@
             </select>
           </div>
         </div>
-        <!-- RESERVA CRUZADA - aparece automáticamente -->
+        <!-- RESERVA CRUZADA - aparece automáticamente al detectar cruce de semanas -->
         <div id="x-cruzada" style="display:none">
           <div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;font-size:13px;color:var(--blue);display:flex;align-items:center;gap:8px;">
             <i class="ti ti-alert-circle"></i> <strong>Reserva cruzada detectada</strong> — las fechas abarcan semanas de Nicolás y de la bolsa. Ingresa el valor de cada bloque.
@@ -318,6 +341,13 @@
                 <input type="hidden" id="cr-bolsa-valor">
               </div>
             </div>
+            <div class="form-grid">
+              <div class="form-group"><label>Comisión Booking bloque bolsa</label>
+                <input type="text" id="cr-bolsa-comision-display" readonly placeholder="Se calcula automático" style="background:var(--border-light)">
+                <input type="hidden" id="cr-bolsa-comision">
+              </div>
+              <div class="form-group"></div>
+            </div>
           </div>
           <div id="cr-distrib" style="display:none">
             <div class="sep"></div>
@@ -325,26 +355,6 @@
             <div class="distrib-box"><div id="cr-distrib-content"></div></div>
           </div>
         </div>
-      </div>
-      <div id="x-h4" style="display:none">
-        <div class="form-grid">
-          <div class="form-group"><label>Modo H4</label>
-            <select id="r-h4-modo" onchange="onTipoChange()">
-              <option value="hotel">Hotel — ingreso trimestral</option>
-              <option value="retiro">Retiro — alquiler directo</option>
-            </select>
-          </div>
-          <div class="form-group"><label>¿Santiago aportó H4 este período?</label>
-            <select id="r-santi-h4" onchange="calcDistrib()">
-              <option value="si">Sí — participa</option>
-              <option value="no">No — no participa</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group"><label>Fecha entrada</label><input type="date" id="r-entrada" oninput="calcDistrib()"></div>
-        <div class="form-group"><label>Fecha salida</label><input type="date" id="r-salida" oninput="calcDistrib()"></div>
       </div>
       <div class="form-grid">
         <div class="form-group"><label>Huésped / concepto</label><input type="text" id="r-huesped" placeholder="Nombre o concepto" oninput="this.value=this.value.toUpperCase()"></div>
@@ -692,11 +702,16 @@ function calcCruzada(){
   const bolsaNoches=parseInt(document.getElementById('cr-bolsa-noches').value)||0;
   const bolsaValor=parseFloat(document.getElementById('cr-bolsa-valor').value)||0;
   const santi=document.getElementById('r-santi-m1').value==='si';
-
-  // Auto-update bruto = sum of both blocks
+  const tipo=document.getElementById('r-tipo').value;
+  // Booking commission on bolsa block
+  const bolsaComision=tipo==='Booking'?round2(bolsaValor*0.18):0;
+  const elD=document.getElementById('cr-bolsa-comision-display');
+  const elH=document.getElementById('cr-bolsa-comision');
+  if(elD) elD.value=bolsaComision>0?fmt(bolsaComision):'$0';
+  if(elH) elH.value=bolsaComision;
+  // Auto-update bruto
   const totalBruto=nicoValor+bolsaValor;
   document.getElementById('r-bruto').value=totalBruto||'';
-
   const feeTipo=document.getElementById('cr-nico-fee-tipo').value;
   let feeResort=0;
   if(feeTipo==='otro'){
@@ -709,13 +724,15 @@ function calcCruzada(){
   if(nicoValor===0&&bolsaValor===0){document.getElementById('cr-distrib').style.display='none';return;}
   const nicoAdmon=nicoValor*0.1;
   const nicoResto=nicoValor-nicoAdmon-feeResort;
-  const bolsaAdmon=bolsaValor*0.1;
-  const bolsaResto=bolsaValor-bolsaAdmon;
+  const bolsaNeto=bolsaValor-bolsaComision;
+  const bolsaAdmon=bolsaNeto*0.1;
+  const bolsaResto=bolsaNeto-bolsaAdmon;
   let html='<div style="font-size:12px;font-weight:600;color:#148F77;margin-bottom:6px">Bloque Nicolás</div>';
   html+=`<div class="distrib-row"><span class="distrib-name">Admon Sergio (10%)</span><span class="distrib-val val-orange">${fmt(nicoAdmon)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Fee resort</span><span class="distrib-val val-red">-${fmt(feeResort)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name" style="font-weight:600">Nicolás Velásquez</span><span class="distrib-val val-green">${fmt(nicoResto)}</span></div>`;
   html+=`<div class="sep"></div><div style="font-size:12px;font-weight:600;color:var(--orange);margin-bottom:6px;margin-top:6px">Bloque Bolsa</div>`;
+  if(bolsaComision>0) html+=`<div class="distrib-row"><span class="distrib-name">Comisión Booking (18%)</span><span class="distrib-val val-red">-${fmt(bolsaComision)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Admon Sergio (10%)</span><span class="distrib-val val-orange">${fmt(bolsaAdmon)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Juan David Bridge (50%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.5)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Sergio Arango (${santi?'25':'50'}%)</span><span class="distrib-val val-green">${fmt(bolsaResto*(santi?0.25:0.5))}</span></div>`;
