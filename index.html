@@ -271,7 +271,6 @@
             <select id="r-semana" onchange="onSemanaChange()">
               <option value="bolsa">Bolsa común (sem 1, 2, 4)</option>
               <option value="Nico">Semana 3 — Nicolás Velásquez</option>
-              <option value="cruzada">⚡ Reserva cruzada (cruza semanas)</option>
             </select>
           </div>
           <div class="form-group" id="x-santi-m1-wrap"><label>¿Santiago aportó H4 este mes?</label>
@@ -281,16 +280,19 @@
             </select>
           </div>
         </div>
-        <!-- RESERVA CRUZADA -->
+        <!-- RESERVA CRUZADA - aparece automáticamente -->
         <div id="x-cruzada" style="display:none">
-          <div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;font-size:12px;color:var(--blue)">
-            <i class="ti ti-info-circle"></i> La reserva cruza semanas. Ingresa el valor de cada bloque por separado.
+          <div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;font-size:13px;color:var(--blue);display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-alert-circle"></i> <strong>Reserva cruzada detectada</strong> — las fechas abarcan semanas de Nicolás y de la bolsa. Ingresa el valor de cada bloque.
           </div>
-          <div style="background:var(--green-bg);border:1px solid #A8D5B5;border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
-            <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;text-transform:uppercase">Bloque Nicolás Velásquez (Sem 3)</div>
+          <div style="background:var(--green-bg);border:1px solid #A8D5B5;border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">🟢 Bloque Nicolás Velásquez — <span id="cr-nico-label"></span></div>
             <div class="form-grid">
-              <div class="form-group"><label>Noches en semana Nicolás</label><input type="number" id="cr-nico-noches" min="1" placeholder="0" oninput="calcCruzada()"></div>
-              <div class="form-group"><label>Valor total bloque Nicolás (COP)</label><input type="number" id="cr-nico-valor" placeholder="0" oninput="calcCruzada()"></div>
+              <div class="form-group"><label>Noches bloque Nicolás</label><input type="number" id="cr-nico-noches" min="1" placeholder="0" readonly style="background:var(--border-light)"></div>
+              <div class="form-group"><label>Valor bloque Nicolás (COP)</label>
+                <input type="text" id="cr-nico-valor-display" placeholder="0" oninput="formatInput(this,'cr-nico-valor');calcCruzada()">
+                <input type="hidden" id="cr-nico-valor">
+              </div>
             </div>
             <div class="form-grid">
               <div class="form-group"><label>Fee resort temporada</label>
@@ -302,24 +304,25 @@
               </div>
               <div class="form-group" id="cr-nico-fee-custom-wrap" style="display:none">
                 <label>Fee resort manual (total)</label>
-                <input type="number" id="cr-nico-fee-custom" placeholder="0" oninput="calcCruzada()">
+                <input type="text" id="cr-nico-fee-custom-display" placeholder="0" oninput="formatInput(this,'cr-nico-fee-custom');calcCruzada()">
+                <input type="hidden" id="cr-nico-fee-custom">
               </div>
             </div>
           </div>
-          <div style="background:var(--orange-bg);border:1px solid #FAD7A0;border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
-            <div style="font-size:11px;font-weight:600;color:var(--orange);margin-bottom:8px;text-transform:uppercase">Bloque Bolsa (Sem 1, 2 ó 4)</div>
+          <div style="background:var(--orange-bg);border:1px solid #FAD7A0;border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--orange);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">🟠 Bloque Bolsa — <span id="cr-bolsa-label"></span></div>
             <div class="form-grid">
-              <div class="form-group"><label>Noches en semana bolsa</label><input type="number" id="cr-bolsa-noches" min="1" placeholder="0" oninput="calcCruzada()"></div>
-              <div class="form-group"><label>Valor total bloque bolsa (COP)</label><input type="number" id="cr-bolsa-valor" placeholder="0" oninput="calcCruzada()"></div>
+              <div class="form-group"><label>Noches bloque bolsa</label><input type="number" id="cr-bolsa-noches" min="1" placeholder="0" readonly style="background:var(--border-light)"></div>
+              <div class="form-group"><label>Valor bloque bolsa (COP)</label>
+                <input type="text" id="cr-bolsa-valor-display" placeholder="0" oninput="formatInput(this,'cr-bolsa-valor');calcCruzada()">
+                <input type="hidden" id="cr-bolsa-valor">
+              </div>
             </div>
           </div>
           <div id="cr-distrib" style="display:none">
             <div class="sep"></div>
             <div class="distrib-title">Distribución total reserva cruzada</div>
             <div class="distrib-box"><div id="cr-distrib-content"></div></div>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:16px;">
-            <button class="btn btn-primary" id="btn-guardar-cruzada" onclick="guardarCruzada()"><i class="ti ti-check"></i> Guardar reserva cruzada</button>
           </div>
         </div>
       </div>
@@ -397,6 +400,7 @@
       </div>
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn btn-primary" id="btn-guardar" onclick="guardarReserva()"><i class="ti ti-check"></i> Guardar reserva</button>
+        <button class="btn btn-primary" id="btn-guardar-cruzada" onclick="guardarCruzada()" style="display:none;background:var(--blue)"><i class="ti ti-check"></i> Guardar reserva cruzada</button>
         <button class="btn btn-secondary" onclick="limpiarForm()">Limpiar</button>
       </div>
       <div id="r-msg" style="display:none"></div>
@@ -606,24 +610,77 @@ function onPropChange(){
   document.getElementById('x-go').style.display=p==='GO'?'block':'none';
   calcDistrib();
 }
+function formatInput(displayEl, hiddenId){
+  const raw=displayEl.value.replace(/\D/g,'');
+  const num=parseInt(raw)||0;
+  displayEl.value=num>0?num.toLocaleString('es-CO'):'';
+  document.getElementById(hiddenId).value=num;
+}
+
+function getWeekOwner(dateStr){
+  // Returns 'Nico' or 'bolsa' for a given date string YYYY-MM-DD
+  const props=[
+    {idx:0,sem:'Sem 1',owner:'bolsa'},
+    {idx:1,sem:'Sem 2',owner:'bolsa'},
+    {idx:2,sem:'Sem 3',owner:'Nico'},
+    {idx:3,sem:'Sem 4',owner:'bolsa'},
+  ];
+  const startIdx={2026:1,2027:2};
+  const dt=new Date(dateStr+'T12:00:00');
+  const year=dt.getFullYear();
+  // Find first Friday of year
+  let firstFri=new Date(year,0,1);
+  while(firstFri.getDay()!==5)firstFri.setDate(firstFri.getDate()+1);
+  const diffDays=Math.floor((dt-firstFri)/(1000*60*60*24));
+  if(diffDays<0) return 'bolsa';
+  const weekNum=Math.floor(diffDays/7);
+  const idx0=startIdx[year]!==undefined?startIdx[year]:0;
+  const semIdx=(idx0+weekNum)%4;
+  return props[semIdx].owner;
+}
+
+function detectCruzada(entrada, salida){
+  // Returns {cruzada, nicoNoches, bolsaNoches, nicoLabel, bolsaLabel} or null
+  if(!entrada||!salida) return null;
+  const start=new Date(entrada+'T12:00:00');
+  const end=new Date(salida+'T12:00:00');
+  let nicoNoches=0, bolsaNoches=0;
+  let nicoStart=null, nicoEnd=null, bolsaStart=null, bolsaEnd=null;
+  let cur=new Date(start);
+  while(cur<end){
+    const ds=cur.toISOString().slice(0,10);
+    const owner=getWeekOwner(ds);
+    if(owner==='Nico'){
+      nicoNoches++;
+      if(!nicoStart)nicoStart=new Date(cur);
+      nicoEnd=new Date(cur);
+    } else {
+      bolsaNoches++;
+      if(!bolsaStart)bolsaStart=new Date(cur);
+      bolsaEnd=new Date(cur);
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  if(nicoNoches>0&&bolsaNoches>0){
+    const f=d=>d.getDate()+'/'+(d.getMonth()+1);
+    return {
+      cruzada:true, nicoNoches, bolsaNoches,
+      nicoLabel:`${nicoNoches} noche(s)${nicoStart?' — '+f(nicoStart)+' al '+f(nicoEnd):''}`,
+      bolsaLabel:`${bolsaNoches} noche(s)${bolsaStart?' — '+f(bolsaStart)+' al '+f(bolsaEnd):''}`
+    };
+  }
+  return null;
+}
+
 function onSemanaChange(){
   const sem=document.getElementById('r-semana').value;
   const santiWrap=document.getElementById('x-santi-m1-wrap');
-  const xCruzada=document.getElementById('x-cruzada');
-  const mainForm=document.getElementById('distrib-box');
   if(sem==='Nico'){
     santiWrap.style.opacity='0.4';santiWrap.style.pointerEvents='none';
     document.getElementById('x-fee-resort').style.display='block';
-    xCruzada.style.display='none';
-  } else if(sem==='cruzada'){
-    santiWrap.style.opacity='1';santiWrap.style.pointerEvents='auto';
-    document.getElementById('x-fee-resort').style.display='none';
-    xCruzada.style.display='block';
-    if(mainForm) mainForm.style.display='none';
   } else {
     santiWrap.style.opacity='1';santiWrap.style.pointerEvents='auto';
     document.getElementById('x-fee-resort').style.display='none';
-    xCruzada.style.display='none';
   }
   calcDistrib();
 }
@@ -635,7 +692,11 @@ function calcCruzada(){
   const bolsaNoches=parseInt(document.getElementById('cr-bolsa-noches').value)||0;
   const bolsaValor=parseFloat(document.getElementById('cr-bolsa-valor').value)||0;
   const santi=document.getElementById('r-santi-m1').value==='si';
-  // Fee resort for Nico block
+
+  // Auto-update bruto = sum of both blocks
+  const totalBruto=nicoValor+bolsaValor;
+  document.getElementById('r-bruto').value=totalBruto||'';
+
   const feeTipo=document.getElementById('cr-nico-fee-tipo').value;
   let feeResort=0;
   if(feeTipo==='otro'){
@@ -646,10 +707,8 @@ function calcCruzada(){
     feeResort=nicoNoches*personas*parseInt(feeTipo);
   }
   if(nicoValor===0&&bolsaValor===0){document.getElementById('cr-distrib').style.display='none';return;}
-  // Nico block distribution
   const nicoAdmon=nicoValor*0.1;
   const nicoResto=nicoValor-nicoAdmon-feeResort;
-  // Bolsa block distribution
   const bolsaAdmon=bolsaValor*0.1;
   const bolsaResto=bolsaValor-bolsaAdmon;
   let html='<div style="font-size:12px;font-weight:600;color:#148F77;margin-bottom:6px">Bloque Nicolás</div>';
@@ -660,8 +719,8 @@ function calcCruzada(){
   html+=`<div class="distrib-row"><span class="distrib-name">Admon Sergio (10%)</span><span class="distrib-val val-orange">${fmt(bolsaAdmon)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Juan David Bridge (50%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.5)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Sergio Arango (${santi?'25':'50'}%)</span><span class="distrib-val val-green">${fmt(bolsaResto*(santi?0.25:0.5))}</span></div>`;
-  if(santi) html+=`<div class="distrib-row"><span class="distrib-name">Santiago Arango (25%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.25)}</span></div>`;
-  html+=`<div class="sep"></div><div class="distrib-row"><span class="distrib-name" style="font-weight:600">Total reserva</span><span class="distrib-val" style="font-size:14px">${fmt(nicoValor+bolsaValor)}</span></div>`;
+  if(santi)html+=`<div class="distrib-row"><span class="distrib-name">Santiago Arango (25%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.25)}</span></div>`;
+  html+=`<div class="sep"></div><div class="distrib-row"><span class="distrib-name" style="font-weight:600">Total reserva</span><span class="distrib-val" style="font-size:14px">${fmt(totalBruto)}</span></div>`;
   document.getElementById('cr-distrib-content').innerHTML=html;
   document.getElementById('cr-distrib').style.display='block';
 }
@@ -724,6 +783,37 @@ function getFeeResort(){
 }
 function calcDistrib(){
   const p=document.getElementById('r-prop').value,bruto=parseFloat(document.getElementById('r-bruto').value)||0;
+
+  // Auto-detect crossed weeks for M1
+  if(p==='M1'){
+    const entrada=document.getElementById('r-entrada').value;
+    const salida=document.getElementById('r-salida').value;
+    const cr=detectCruzada(entrada,salida);
+    const xCruzada=document.getElementById('x-cruzada');
+    const btnCruzada=document.getElementById('btn-guardar-cruzada');
+    const btnNormal=document.getElementById('btn-guardar');
+    if(cr){
+      xCruzada.style.display='block';
+      btnCruzada.style.display='inline-flex';
+      btnNormal.style.display='none';
+      document.getElementById('cr-nico-noches').value=cr.nicoNoches;
+      document.getElementById('cr-bolsa-noches').value=cr.bolsaNoches;
+      document.getElementById('cr-nico-label').textContent=cr.nicoLabel;
+      document.getElementById('cr-bolsa-label').textContent=cr.bolsaLabel;
+      // Update semana selector to reflect detection
+      document.getElementById('r-semana').value='bolsa';
+      document.getElementById('x-santi-m1-wrap').style.opacity='1';
+      document.getElementById('x-santi-m1-wrap').style.pointerEvents='auto';
+      document.getElementById('distrib-box').style.display='none';
+      calcCruzada();
+      return;
+    } else {
+      xCruzada.style.display='none';
+      btnCruzada.style.display='none';
+      btnNormal.style.display='inline-flex';
+    }
+  }
+
   if(!p||bruto===0){document.getElementById('distrib-box').style.display='none';return;}
   const tipo=document.getElementById('r-tipo').value;
   const comision=tipo==='Booking'?round2(bruto*0.18):0;
@@ -940,7 +1030,11 @@ function showMsg(elId,txt,tipo){
 function limpiarForm(){
   ['r-prop','r-tipo','r-huesped','r-entrada','r-salida','r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('r-personas').value='2';document.getElementById('r-comision').value='';document.getElementById('r-comision-display').value='';
-  ['x-m1','x-h4','x-go','x-fee-resort','x-l3-directo','distrib-box'].forEach(id=>document.getElementById(id).style.display='none');
+  ['x-m1','x-h4','x-go','x-fee-resort','x-l3-directo','distrib-box','x-cruzada','cr-distrib'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  document.getElementById('btn-guardar').style.display='inline-flex';
+  document.getElementById('btn-guardar-cruzada').style.display='none';
+  ['cr-nico-valor-display','cr-bolsa-valor-display','cr-nico-fee-custom-display'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['cr-nico-valor','cr-bolsa-valor','cr-nico-fee-custom'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
 function renderDashboard(){
