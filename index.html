@@ -969,22 +969,18 @@ function getDistrib(r){
 
 function getSocioValor(r,socio){
   // For paid reservations with stored payment values
-  if(r.pago_sapema!==null&&r.pago_sapema!==undefined&&r.estado_pago==='pagado'){
-    if(socio==='Sergio Arango')return(r.pago_sapema||0)+(r.mng_fee||0);
-    if(socio==='Juan David Bridge')return r.pago_jdbj||0;
-    if(socio==='Santiago Arango')return r.pago_sar||0;
-    if(socio==='Nicolás Velásquez'&&r.prop==='M1'&&r.semana==='Nico')return(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
-    if(socio==='Alejandro Londoño'&&r.prop==='L3'){
-      // Alejandro's value is stored in pago_jdbj for L3
-      if(r.pago_jdbj)return r.pago_jdbj;
-      // Fallback: calculate from neto
-      const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
-      if(r.tipo==='Directo'){const fee=neto*0.1;return(neto-fee)*0.5;}
-      return neto*0.5;
-    }
+  const tienePagos=r.pago_sapema!==null&&r.pago_sapema!==undefined&&
+                   (r.pago_sapema>0||r.pago_jdbj>0||r.pago_sar>0||r.mng_fee>0);
+  if(tienePagos&&r.estado_pago==='pagado'){
+    if(socio==='Sergio Arango') return (r.pago_sapema||0)+(r.mng_fee||0);
+    if(socio==='Juan David Bridge'&&r.prop!=='L3') return r.pago_jdbj||0;
+    if(socio==='Santiago Arango') return r.pago_sar||0;
+    if(socio==='Nicolás Velásquez'&&r.prop==='M1'&&r.semana==='Nico')
+      return (r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
+    if(socio==='Alejandro Londoño'&&r.prop==='L3') return r.pago_jdbj||0;
     return 0;
   }
-  // For historical data or non-paid: calculate from distribution
+  // Calculate from distribution logic
   const items=getDistrib(r);
   const match=items.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes(socio.split(' ')[0].toLowerCase()));
   return match.reduce((s,d)=>s+d.v,0);
