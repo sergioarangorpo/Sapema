@@ -1014,7 +1014,7 @@ async function guardarReserva(){
     // Show send to Naio button for Palomino properties
     if(['M1','L3','H4'].includes(p)){
       const msgEl=document.getElementById('r-msg');
-      msgEl.innerHTML+=' <button class="btn btn-blue btn-sm" style="margin-left:8px" onclick="enviarReservaNaio(\''+h+'\',\''+e+'\',\''+s+'\','+noches+',\''+p+'\')"><i class="ti ti-send"></i> Notificar a Naio</button>';
+      msgEl.innerHTML+=' <button class="btn btn-blue btn-sm" style="margin-left:8px" onclick="enviarReservaNaio(\''+h+'\',\''+e+'\',\''+s+'\','+noches+',\''+p+'\','+personas+')"><i class="ti ti-send"></i> Notificar a Naio</button>';
     }
     limpiarForm();await loadReservas();
   }catch(err){showMsg('r-msg','Error: '+err.message,'danger');}
@@ -1139,7 +1139,7 @@ function cerrarModalEdit(){document.getElementById('modal-edit').classList.remov
 function showMsg(elId,txt,tipo){
   const el=document.getElementById(elId);
   el.style.display='flex';el.className='alert alert-'+tipo;el.innerHTML='<i class="ti ti-'+(tipo==='success'?'check':'alert-circle')+'"></i>'+txt;
-  if(tipo!=='danger')setTimeout(()=>{el.style.display='none';},3500);
+  if(tipo!=='danger')setTimeout(()=>{el.style.display='none';},15000);
 }
 function limpiarForm(){
   ['r-prop','r-tipo','r-huesped','r-entrada','r-salida','r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -1560,24 +1560,34 @@ function enviarNaio(){
     const e=r.entrada,s=r.salida||r.entrada;
     return e<=fin&&s>=inicio;
   }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
-  const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
+  const nombreVilla=p=>p==='M1'?'M1':p==='L3'?'L3':'H4';
   const to='reservasnaio@oxohotel.com';
   const cc='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
-  const subject=`Calendario reservas ${meses[mes-1]} ${anio} — Villas Naio`;
-  let body=`Estimado equipo Naio,\n\nAdjunto el calendario de reservas para ${meses[mes-1]} ${anio}:\n\n`;
-  body+=`CHECK IN\t\tCHECK OUT\t\tNOCHES\tHUESPED\t\t\t\tPERSONAS\tVILLA\n`;
-  body+=`${'─'.repeat(80)}\n`;
-  lista.forEach(r=>{body+=`${r.entrada}\t\t${r.salida||'—'}\t\t${r.noches||0}\t${(r.huesped||'—').padEnd(20)}\t${r.personas||0}\t\t${nombreVilla(r.prop)}\n`;});
-  body+=`\n${'─'.repeat(80)}\nTotal: ${lista.length} reserva(s)\n\nSaludos,\nSergio Arango\nSapema`;
+  const subject=`*** Calendario de reservas ${meses[mes-1]} ${anio} Villas Naio`;
+  const fmtDate=d=>d.split('-').reverse().join('/');
+  let body=`Hola Maria, cómo estás??\n\nMe ayudas por favor con estas nuevas reservas:\n\n`;
+  body+=`ADICIÓN\n\n`;
+  body+=`Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n`;
+  body+=`${'─'.repeat(70)}\n`;
+  lista.forEach(r=>{
+    body+=`${fmtDate(r.entrada)}\t${fmtDate(r.salida||r.entrada)}\t${r.noches||0}\t${r.huesped||'—'}\t${r.personas||0}\t${nombreVilla(r.prop)}\t0\n`;
+  });
+  body+=`\nGracias!!`;
   window.location.href=`mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-function enviarReservaNaio(huesped,entrada,salida,noches,prop){
-  const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
+function enviarReservaNaio(huesped,entrada,salida,noches,prop,personas){
+  const nombreVilla=p=>p==='M1'?'M1':p==='L3'?'L3':'H4';
   const to='reservasnaio@oxohotel.com';
   const cc='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
-  const subject=`Nueva reserva ${nombreVilla(prop)} — ${huesped} — Check in ${entrada}`;
-  const body=`Estimado equipo Naio,\n\nLes informo una nueva reserva:\n\nVilla: ${nombreVilla(prop)}\nHuésped: ${huesped}\nCheck In: ${entrada}\nCheck Out: ${salida}\nNoches: ${noches}\n\nSaludos,\nSergio Arango\nSapema`;
+  const fmtDate=d=>d.split('-').reverse().join('/');
+  const subject=`*** Adición de reserva Villa ${nombreVilla(prop)}`;
+  let body=`Hola Maria, cómo estás??\n\nMe ayudas por favor con esta nueva reserva:\n\n`;
+  body+=`ADICIÓN\n\n`;
+  body+=`Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n`;
+  body+=`${'─'.repeat(70)}\n`;
+  body+=`${fmtDate(entrada)}\t${fmtDate(salida)}\t${noches}\t${huesped}\t${personas||0}\t${nombreVilla(prop)}\t0\n`;
+  body+=`\nGracias!!`;
   window.location.href=`mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
