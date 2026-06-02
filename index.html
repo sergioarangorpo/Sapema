@@ -271,6 +271,7 @@
             <select id="r-semana" onchange="onSemanaChange()">
               <option value="bolsa">Bolsa común (sem 1, 2, 4)</option>
               <option value="Nico">Semana 3 — Nicolás Velásquez</option>
+              <option value="cruzada">⚡ Reserva cruzada (cruza semanas)</option>
             </select>
           </div>
           <div class="form-group" id="x-santi-m1-wrap"><label>¿Santiago aportó H4 este mes?</label>
@@ -278,6 +279,47 @@
               <option value="si">Sí — participa en bolsa</option>
               <option value="no">No — solo JD y Sergio</option>
             </select>
+          </div>
+        </div>
+        <!-- RESERVA CRUZADA -->
+        <div id="x-cruzada" style="display:none">
+          <div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;font-size:12px;color:var(--blue)">
+            <i class="ti ti-info-circle"></i> La reserva cruza semanas. Ingresa el valor de cada bloque por separado.
+          </div>
+          <div style="background:var(--green-bg);border:1px solid #A8D5B5;border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;text-transform:uppercase">Bloque Nicolás Velásquez (Sem 3)</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Noches en semana Nicolás</label><input type="number" id="cr-nico-noches" min="1" placeholder="0" oninput="calcCruzada()"></div>
+              <div class="form-group"><label>Valor total bloque Nicolás (COP)</label><input type="number" id="cr-nico-valor" placeholder="0" oninput="calcCruzada()"></div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group"><label>Fee resort temporada</label>
+                <select id="cr-nico-fee-tipo" onchange="calcCruzada()">
+                  <option value="80000">Baja — $80.000/pers/noche</option>
+                  <option value="100000">Alta — $100.000/pers/noche</option>
+                  <option value="otro">Otro valor...</option>
+                </select>
+              </div>
+              <div class="form-group" id="cr-nico-fee-custom-wrap" style="display:none">
+                <label>Fee resort manual (total)</label>
+                <input type="number" id="cr-nico-fee-custom" placeholder="0" oninput="calcCruzada()">
+              </div>
+            </div>
+          </div>
+          <div style="background:var(--orange-bg);border:1px solid #FAD7A0;border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--orange);margin-bottom:8px;text-transform:uppercase">Bloque Bolsa (Sem 1, 2 ó 4)</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Noches en semana bolsa</label><input type="number" id="cr-bolsa-noches" min="1" placeholder="0" oninput="calcCruzada()"></div>
+              <div class="form-group"><label>Valor total bloque bolsa (COP)</label><input type="number" id="cr-bolsa-valor" placeholder="0" oninput="calcCruzada()"></div>
+            </div>
+          </div>
+          <div id="cr-distrib" style="display:none">
+            <div class="sep"></div>
+            <div class="distrib-title">Distribución total reserva cruzada</div>
+            <div class="distrib-box"><div id="cr-distrib-content"></div></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <button class="btn btn-primary" id="btn-guardar-cruzada" onclick="guardarCruzada()"><i class="ti ti-check"></i> Guardar reserva cruzada</button>
           </div>
         </div>
       </div>
@@ -567,9 +609,100 @@ function onPropChange(){
 function onSemanaChange(){
   const sem=document.getElementById('r-semana').value;
   const santiWrap=document.getElementById('x-santi-m1-wrap');
-  if(sem==='Nico'){santiWrap.style.opacity='0.4';santiWrap.style.pointerEvents='none';document.getElementById('x-fee-resort').style.display='block';}
-  else{santiWrap.style.opacity='1';santiWrap.style.pointerEvents='auto';document.getElementById('x-fee-resort').style.display='none';}
+  const xCruzada=document.getElementById('x-cruzada');
+  const mainForm=document.getElementById('distrib-box');
+  if(sem==='Nico'){
+    santiWrap.style.opacity='0.4';santiWrap.style.pointerEvents='none';
+    document.getElementById('x-fee-resort').style.display='block';
+    xCruzada.style.display='none';
+  } else if(sem==='cruzada'){
+    santiWrap.style.opacity='1';santiWrap.style.pointerEvents='auto';
+    document.getElementById('x-fee-resort').style.display='none';
+    xCruzada.style.display='block';
+    if(mainForm) mainForm.style.display='none';
+  } else {
+    santiWrap.style.opacity='1';santiWrap.style.pointerEvents='auto';
+    document.getElementById('x-fee-resort').style.display='none';
+    xCruzada.style.display='none';
+  }
   calcDistrib();
+}
+
+function calcCruzada(){
+  const personas=parseInt(document.getElementById('r-personas').value)||1;
+  const nicoNoches=parseInt(document.getElementById('cr-nico-noches').value)||0;
+  const nicoValor=parseFloat(document.getElementById('cr-nico-valor').value)||0;
+  const bolsaNoches=parseInt(document.getElementById('cr-bolsa-noches').value)||0;
+  const bolsaValor=parseFloat(document.getElementById('cr-bolsa-valor').value)||0;
+  const santi=document.getElementById('r-santi-m1').value==='si';
+  // Fee resort for Nico block
+  const feeTipo=document.getElementById('cr-nico-fee-tipo').value;
+  let feeResort=0;
+  if(feeTipo==='otro'){
+    document.getElementById('cr-nico-fee-custom-wrap').style.display='block';
+    feeResort=parseFloat(document.getElementById('cr-nico-fee-custom').value)||0;
+  } else {
+    document.getElementById('cr-nico-fee-custom-wrap').style.display='none';
+    feeResort=nicoNoches*personas*parseInt(feeTipo);
+  }
+  if(nicoValor===0&&bolsaValor===0){document.getElementById('cr-distrib').style.display='none';return;}
+  // Nico block distribution
+  const nicoAdmon=nicoValor*0.1;
+  const nicoResto=nicoValor-nicoAdmon-feeResort;
+  // Bolsa block distribution
+  const bolsaAdmon=bolsaValor*0.1;
+  const bolsaResto=bolsaValor-bolsaAdmon;
+  let html='<div style="font-size:12px;font-weight:600;color:#148F77;margin-bottom:6px">Bloque Nicolás</div>';
+  html+=`<div class="distrib-row"><span class="distrib-name">Admon Sergio (10%)</span><span class="distrib-val val-orange">${fmt(nicoAdmon)}</span></div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name">Fee resort</span><span class="distrib-val val-red">-${fmt(feeResort)}</span></div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name" style="font-weight:600">Nicolás Velásquez</span><span class="distrib-val val-green">${fmt(nicoResto)}</span></div>`;
+  html+=`<div class="sep"></div><div style="font-size:12px;font-weight:600;color:var(--orange);margin-bottom:6px;margin-top:6px">Bloque Bolsa</div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name">Admon Sergio (10%)</span><span class="distrib-val val-orange">${fmt(bolsaAdmon)}</span></div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name">Juan David Bridge (50%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.5)}</span></div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name">Sergio Arango (${santi?'25':'50'}%)</span><span class="distrib-val val-green">${fmt(bolsaResto*(santi?0.25:0.5))}</span></div>`;
+  if(santi) html+=`<div class="distrib-row"><span class="distrib-name">Santiago Arango (25%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.25)}</span></div>`;
+  html+=`<div class="sep"></div><div class="distrib-row"><span class="distrib-name" style="font-weight:600">Total reserva</span><span class="distrib-val" style="font-size:14px">${fmt(nicoValor+bolsaValor)}</span></div>`;
+  document.getElementById('cr-distrib-content').innerHTML=html;
+  document.getElementById('cr-distrib').style.display='block';
+}
+
+async function guardarCruzada(){
+  const huesped=document.getElementById('r-huesped').value;
+  const entrada=document.getElementById('r-entrada').value;
+  const salida=document.getElementById('r-salida').value;
+  const personas=parseInt(document.getElementById('r-personas').value)||1;
+  const tipo=document.getElementById('r-tipo').value;
+  const santi=document.getElementById('r-santi-m1').value;
+  const nicoNoches=parseInt(document.getElementById('cr-nico-noches').value)||0;
+  const nicoValor=parseFloat(document.getElementById('cr-nico-valor').value)||0;
+  const bolsaNoches=parseInt(document.getElementById('cr-bolsa-noches').value)||0;
+  const bolsaValor=parseFloat(document.getElementById('cr-bolsa-valor').value)||0;
+  if(!huesped||!entrada||!salida||nicoValor===0||bolsaValor===0){
+    showMsg('r-msg','Completa todos los campos incluyendo valores de ambos bloques.','info');return;
+  }
+  const feeTipo=document.getElementById('cr-nico-fee-tipo').value;
+  let feeResort=feeTipo==='otro'?(parseFloat(document.getElementById('cr-nico-fee-custom').value)||0):nicoNoches*personas*parseInt(feeTipo);
+  const btn=document.getElementById('btn-guardar-cruzada');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
+  try{
+    // Save Nico block
+    await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({
+      prop:'M1',tipo,huesped:huesped.toUpperCase(),entrada,salida,
+      bruto:nicoValor,comision:0,comision_pasarela:0,neto:nicoValor,
+      personas,noches:nicoNoches,aseo:0,semana:'Nico',santi_m1:null,
+      fee_resort_historico:feeResort,estado_pago:'pendiente'
+    })});
+    // Save Bolsa block
+    await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({
+      prop:'M1',tipo,huesped:huesped.toUpperCase(),entrada,salida,
+      bruto:bolsaValor,comision:0,comision_pasarela:0,neto:bolsaValor,
+      personas,noches:bolsaNoches,aseo:0,semana:'bolsa',santi_m1:santi,
+      fee_resort_historico:0,estado_pago:'pendiente'
+    })});
+    showMsg('r-msg','Reserva cruzada guardada — 2 registros creados correctamente.','success');
+    limpiarForm();await loadReservas();
+  }catch(err){showMsg('r-msg','Error: '+err.message,'danger');}
+  finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar reserva cruzada';}
 }
 function onTipoChange(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
