@@ -1078,16 +1078,30 @@ function descargarReporte(){
 
 function renderCalendario(){
   const year=parseInt(document.getElementById('cal-year').value);
+  // Colors and owners per semester index (0=Sem1, 1=Sem2, 2=Sem3, 3=Sem4)
   const colores=['#F6A623','#85B7EB','#1E8449','#1A5276'];
   const props=['Juan David Bridge','Juan David Bridge','Nicolás Velásquez','Sergio Arango'];
-  let firstFri=new Date(year,0,1);while(firstFri.getDay()!==5)firstFri.setDate(firstFri.getDate()+1);
-  let weeks=[],cur=new Date(firstFri),idx=0;
-  while(cur.getFullYear()<=year){const s=new Date(cur),e=new Date(cur);e.setDate(e.getDate()+6);weeks.push({s,e,sem:(idx%4)+1,color:colores[idx%4],prop:props[idx%4]});cur.setDate(cur.getDate()+7);idx++;}
+  const semNames=['Sem 1','Sem 2','Sem 3','Sem 4'];
+  // Each year starts at a different week index (rotates so everyone gets special dates)
+  // 2026: starts at Sem2 (idx=1) — confirmed by Sergio
+  // 2027: starts at Sem3 (idx=2) — confirmed by Sergio
+  const startIdx={2026:1, 2027:2};
+  const idx0=startIdx[year]!==undefined?startIdx[year]:0;
+  let firstFri=new Date(year,0,1);
+  while(firstFri.getDay()!==5)firstFri.setDate(firstFri.getDate()+1);
+  let weeks=[],cur=new Date(firstFri),idx=idx0;
+  while(cur.getFullYear()<=year){
+    const s=new Date(cur),e=new Date(cur);
+    e.setDate(e.getDate()+6);
+    weeks.push({s,e,sem:semNames[idx%4],color:colores[idx%4],prop:props[idx%4]});
+    cur.setDate(cur.getDate()+7);idx++;
+  }
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const byM={};weeks.filter(w=>w.s.getFullYear()===year).forEach(w=>{const m=w.s.getMonth();if(!byM[m])byM[m]=[];byM[m].push(w);});
+  const byM={};
+  weeks.filter(w=>w.s.getFullYear()===year).forEach(w=>{const m=w.s.getMonth();if(!byM[m])byM[m]=[];byM[m].push(w);});
   const f2=d=>d.getDate()+'/'+(d.getMonth()+1);
   document.getElementById('cal-content').innerHTML=Object.entries(byM).map(([m,ws])=>
-    `<div class="cal-month">${meses[parseInt(m)]}</div>`+ws.map(w=>`<div class="cal-week"><span class="cal-dot" style="background:${w.color}"></span><span class="cal-sem">Sem ${w.sem}</span><span class="cal-dates">${f2(w.s)} → ${f2(w.e)}</span><span class="cal-prop">${w.prop}</span></div>`).join('')).join('');
+    `<div class="cal-month">${meses[parseInt(m)]}</div>`+ws.map(w=>`<div class="cal-week"><span class="cal-dot" style="background:${w.color}"></span><span class="cal-sem">${w.sem}</span><span class="cal-dates">${f2(w.s)} → ${f2(w.e)}</span><span class="cal-prop">${w.prop}</span></div>`).join('')).join('');
 }
 
 loadReservas();
