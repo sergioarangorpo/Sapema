@@ -1246,15 +1246,24 @@ function renderChartSocios(){
   };
 
   lista.forEach(r=>{
-    if(r.pago_sapema!==null&&r.pago_sapema!==undefined&&r.estado_pago==='pagado'){
+    if(r.pago_sapema!==null&&r.pago_sapema!==undefined&&r.estado_pago==='pagado'&&r.pago_sapema>0){
+      // Use stored payment values
       socios['Sergio Arango']+=(r.pago_sapema||0)+(r.mng_fee||0);
-      socios['Juan David Bridge']+=(r.pago_jdbj||0);
-      socios['Santiago Arango']+=(r.pago_sar||0);
-      if(r.prop==='M1'&&r.semana==='Nico') socios['Nicolás Velásquez']+=(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
-      if(r.prop==='L3') socios['Alejandro Londoño']+=(r.pago_jdbj||0);
+      if(r.prop==='L3'){
+        socios['Alejandro Londoño']+=(r.pago_jdbj||0);
+      } else {
+        socios['Juan David Bridge']+=(r.pago_jdbj||0);
+        socios['Santiago Arango']+=(r.pago_sar||0);
+      }
+      if(r.prop==='M1'&&r.semana==='Nico'){
+        socios['Nicolás Velásquez']+=(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
+      }
     } else {
+      // Calculate from distribution logic
       getDistrib(r).filter(d=>d.t==='ingreso').forEach(d=>{
-        Object.keys(socios).forEach(s=>{if(d.n.includes(s.split(' ')[0])&&d.n.includes(s.split(' ')[1]))socios[s]+=d.v;});
+        Object.keys(socios).forEach(s=>{
+          if(d.n.includes(s.split(' ')[0])&&d.n.includes(s.split(' ')[1]))socios[s]+=d.v;
+        });
       });
     }
   });
@@ -1323,8 +1332,14 @@ function renderChartIngresos(){
     },
     options:{
       responsive:true,
-      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.raw.toLocaleString('es-CO')}k`}}},
-      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,ticks:{callback:v=>'$'+v+'k',font:{size:10}},grid:{color:'#F0EDE8'}}}
+      plugins:{
+        legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${(c.raw/1000).toFixed(1)}M`}}
+      },
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},
+        y:{stacked:true,ticks:{callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'M':'$'+v+'k',font:{size:10}},grid:{color:'#F0EDE8'}}
+      }
     }
   });
 }
