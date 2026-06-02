@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #F7F5F0; --surface: #FFFFFF; --border: #E5E2DB; --border-light: #F0EDE8;
@@ -208,18 +209,50 @@
     <div id="pendientes-banner" style="display:none" class="pendientes-banner">
       <i class="ti ti-alert-circle"></i><span id="pendientes-txt"></span>
     </div>
-    <div class="metrics">
-      <div class="metric"><div class="metric-label">Reservas totales</div><div class="metric-value" id="d-total">—</div><div class="metric-sub">todas las propiedades</div></div>
-      <div class="metric"><div class="metric-label">Ingresos brutos</div><div class="metric-value" id="d-bruto">—</div><div class="metric-sub">COP histórico</div></div>
-      <div class="metric"><div class="metric-label">Utilidad Sergio</div><div class="metric-value" id="d-sergio">—</div><div class="metric-sub">admon + participación</div></div>
-      <div class="metric"><div class="metric-label">Noches vendidas</div><div class="metric-value" id="d-noches">—</div><div class="metric-sub">total</div></div>
+
+    <!-- PERÍODO SELECTOR -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;font-weight:600;color:var(--text)">Resumen de gestión</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-sm" id="db-btn-mes" onclick="setPeriodo('mes')" style="background:var(--text);color:#fff;border:none">Mes actual</button>
+        <button class="btn btn-secondary btn-sm" id="db-btn-3m" onclick="setPeriodo('3m')">Últimos 3M</button>
+        <button class="btn btn-secondary btn-sm" id="db-btn-anio" onclick="setPeriodo('anio')">Año actual</button>
+        <button class="btn btn-secondary btn-sm" id="db-btn-todo" onclick="setPeriodo('todo')">Histórico</button>
+      </div>
     </div>
+
+    <!-- KPIs GLOBALES -->
+    <div class="metrics" style="margin-bottom:16px;">
+      <div class="metric"><div class="metric-label">Reservas período</div><div class="metric-value" id="d-total">—</div><div class="metric-sub" id="d-periodo-label">mes actual</div></div>
+      <div class="metric"><div class="metric-label">Ingresos brutos</div><div class="metric-value" id="d-bruto">—</div><div class="metric-sub">COP período</div></div>
+      <div class="metric"><div class="metric-label">Utilidad Sergio</div><div class="metric-value" id="d-sergio">—</div><div class="metric-sub">admon + participación</div></div>
+      <div class="metric"><div class="metric-label">Noches vendidas</div><div class="metric-value" id="d-noches">—</div><div class="metric-sub">período</div></div>
+    </div>
+
+    <!-- GRÁFICA INGRESOS POR MES -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><i class="ti ti-chart-bar"></i> Ingresos brutos por mes — últimos 12 meses</div>
+      <div id="chart-container" style="width:100%;overflow-x:auto;">
+        <canvas id="chart-ingresos" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- GRÁFICA INGRESOS POR PROPIEDAD -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><i class="ti ti-building"></i> Ingresos por propiedad — período seleccionado</div>
+      <div id="chart-prop-container" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0;">
+        <div id="chart-prop-bars" style="flex:1;min-width:280px;"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN POR PROPIEDAD -->
     <div class="prop-grid">
       <div class="prop-card">
         <div class="prop-card-header"><span class="prop-dot" style="background:var(--go)"></span><span class="prop-name">GO Living — Medellín</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Ingresos brutos</span><span class="prop-stat-val" id="go-bruto">$0</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Costo aseo</span><span class="prop-stat-val" style="color:var(--red)" id="go-aseo">-$0</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Reservas</span><span class="prop-stat-val" id="go-res">0</span></div>
+        <div class="prop-stat"><span class="prop-stat-label">Noches</span><span class="prop-stat-val" id="go-noches">0</span></div>
         <div style="margin-top:10px"><span class="tag tag-airbnb">Airbnb</span></div>
       </div>
       <div class="prop-card">
@@ -228,6 +261,7 @@
         <div class="prop-stat"><span class="prop-stat-label">Admon Sergio (10%)</span><span class="prop-stat-val" style="color:var(--green)" id="m1-admon">$0</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Semana Nicolás</span><span class="prop-stat-val" id="m1-nico">$0</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Reservas</span><span class="prop-stat-val" id="m1-res">0</span></div>
+        <div class="prop-stat"><span class="prop-stat-label">Noches</span><span class="prop-stat-val" id="m1-noches">0</span></div>
         <div style="margin-top:10px"><span class="tag tag-airbnb">Airbnb</span><span class="tag tag-booking">Booking</span><span class="tag tag-nico">Semana Nico</span></div>
       </div>
       <div class="prop-card">
@@ -235,6 +269,7 @@
         <div class="prop-stat"><span class="prop-stat-label">Ingresos brutos</span><span class="prop-stat-val" id="l3-bruto">$0</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Fee comercial pagado</span><span class="prop-stat-val" style="color:var(--orange)" id="l3-fee">$0</span></div>
         <div class="prop-stat"><span class="prop-stat-label">Reservas</span><span class="prop-stat-val" id="l3-res">0</span></div>
+        <div class="prop-stat"><span class="prop-stat-label">Noches</span><span class="prop-stat-val" id="l3-noches">0</span></div>
         <div style="margin-top:10px"><span class="tag tag-airbnb">Airbnb</span><span class="tag tag-booking">Booking</span></div>
       </div>
       <div class="prop-card">
@@ -624,7 +659,7 @@ function formatInput(displayEl, hiddenId){
   const raw=displayEl.value.replace(/\D/g,'');
   const num=parseInt(raw)||0;
   displayEl.value=num>0?num.toLocaleString('es-CO'):'';
-  document.getElementById(hiddenId).value=num;
+  document.getElementById(hiddenId).value=num||'';
 }
 
 function getWeekOwner(dateStr){
@@ -750,11 +785,14 @@ async function guardarCruzada(){
   const tipo=document.getElementById('r-tipo').value;
   const santi=document.getElementById('r-santi-m1').value;
   const nicoNoches=parseInt(document.getElementById('cr-nico-noches').value)||0;
-  const nicoValor=parseFloat(document.getElementById('cr-nico-valor').value)||0;
   const bolsaNoches=parseInt(document.getElementById('cr-bolsa-noches').value)||0;
-  const bolsaValor=parseFloat(document.getElementById('cr-bolsa-valor').value)||0;
+  // Read from hidden fields, fallback to display fields
+  const nicoValorH=document.getElementById('cr-nico-valor').value;
+  const bolsaValorH=document.getElementById('cr-bolsa-valor').value;
+  const nicoValor=nicoValorH?parseFloat(nicoValorH):parseFloat((document.getElementById('cr-nico-valor-display').value||'').replace(/\./g,'').replace(',','.'))||0;
+  const bolsaValor=bolsaValorH?parseFloat(bolsaValorH):parseFloat((document.getElementById('cr-bolsa-valor-display').value||'').replace(/\./g,'').replace(',','.'))||0;
   if(!huesped||!entrada||!salida||nicoValor===0||bolsaValor===0){
-    showMsg('r-msg','Completa todos los campos incluyendo valores de ambos bloques.','info');return;
+    showMsg('r-msg','Completa todos los campos incluyendo nombre y valores de ambos bloques.','info');return;
   }
   const feeTipo=document.getElementById('cr-nico-fee-tipo').value;
   let feeResort=feeTipo==='otro'?(parseFloat(document.getElementById('cr-nico-fee-custom').value)||0):nicoNoches*personas*parseInt(feeTipo);
@@ -1060,32 +1098,157 @@ function limpiarForm(){
   ['cr-nico-valor','cr-bolsa-valor','cr-nico-fee-custom'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
+let dbPeriodo='mes';
+let chartIngresos=null;
+
+function setPeriodo(p){
+  dbPeriodo=p;
+  ['mes','3m','anio','todo'].forEach(x=>{
+    const btn=document.getElementById('db-btn-'+x);
+    if(btn){btn.className=x===p?'btn btn-sm':'btn btn-secondary btn-sm';if(x===p)btn.style.background='var(--text)',btn.style.color='#fff',btn.style.border='none';else btn.style.background='',btn.style.color='',btn.style.border='';}
+  });
+  renderDashboard();
+}
+
+function getPeriodoRange(){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth();
+  if(dbPeriodo==='mes') return {desde:`${y}-${String(m+1).padStart(2,'0')}-01`,hasta:`${y}-${String(m+1).padStart(2,'0')}-31`};
+  if(dbPeriodo==='3m'){const d=new Date(now);d.setMonth(d.getMonth()-3);return {desde:d.toISOString().slice(0,10),hasta:now.toISOString().slice(0,10)};}
+  if(dbPeriodo==='anio') return {desde:`${y}-01-01`,hasta:`${y}-12-31`};
+  return {desde:'2000-01-01',hasta:'2099-12-31'};
+}
+
+function getPeriodoLabel(){
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now=new Date();
+  if(dbPeriodo==='mes') return meses[now.getMonth()]+' '+now.getFullYear();
+  if(dbPeriodo==='3m') return 'Últimos 3 meses';
+  if(dbPeriodo==='anio') return 'Año '+now.getFullYear();
+  return 'Histórico completo';
+}
+
 function renderDashboard(){
-  document.getElementById('d-total').textContent=reservas.length;
-  const brutoTotal=reservas.reduce((s,r)=>s+(r.bruto||0),0);
-  const noches=reservas.reduce((s,r)=>s+(r.noches||0),0);
-  let sergio=0;const byProp={GO:0,M1:0,L3:0,H4:0};
-  reservas.forEach(r=>{byProp[r.prop]=(byProp[r.prop]||0)+(r.bruto||0);if(r.pago_sapema)sergio+=r.pago_sapema+(r.mng_fee||0);else getDistrib(r).forEach(d=>{if(d.n.includes('Sergio'))sergio+=d.v;});});
+  const {desde,hasta}=getPeriodoRange();
+  const lista=reservas.filter(r=>r.entrada>=desde&&r.entrada<=hasta&&r.estado_pago!=='no_paga');
+  const total=lista.length;
+  const brutoTotal=lista.reduce((s,r)=>s+(r.bruto||0),0);
+  const noches=lista.reduce((s,r)=>s+(r.noches||0),0);
+  let sergio=0;
+  const byProp={GO:0,M1:0,L3:0,H4:0};
+  const nochesProp={GO:0,M1:0,L3:0,H4:0};
+  const resProp={GO:0,M1:0,L3:0,H4:0};
+  lista.forEach(r=>{
+    byProp[r.prop]=(byProp[r.prop]||0)+(r.bruto||0);
+    nochesProp[r.prop]=(nochesProp[r.prop]||0)+(r.noches||0);
+    resProp[r.prop]=(resProp[r.prop]||0)+1;
+    if(r.pago_sapema)sergio+=r.pago_sapema+(r.mng_fee||0);
+    else getDistrib(r).forEach(d=>{if(d.n.includes('Sergio'))sergio+=d.v;});
+  });
+
+  document.getElementById('d-total').textContent=total;
   document.getElementById('d-bruto').textContent='$'+Math.round(brutoTotal/1000000)+'M';
   document.getElementById('d-sergio').textContent='$'+Math.round(sergio/1000000)+'M';
   document.getElementById('d-noches').textContent=noches;
+  document.getElementById('d-periodo-label').textContent=getPeriodoLabel();
+
+  // Per property stats
   document.getElementById('go-bruto').textContent=fmt(byProp.GO);
-  document.getElementById('go-aseo').textContent='-'+fmt(reservas.filter(r=>r.prop==='GO').reduce((s,r)=>s+(r.aseo||0),0));
-  document.getElementById('go-res').textContent=reservas.filter(r=>r.prop==='GO').length;
+  document.getElementById('go-aseo').textContent='-'+fmt(lista.filter(r=>r.prop==='GO').reduce((s,r)=>s+(r.aseo||0),0));
+  document.getElementById('go-res').textContent=resProp.GO;
+  document.getElementById('go-noches').textContent=nochesProp.GO;
   document.getElementById('m1-bruto').textContent=fmt(byProp.M1);
-  document.getElementById('m1-admon').textContent=fmt(reservas.filter(r=>r.prop==='M1').reduce((s,r)=>s+(r.mng_fee||r.neto*0.1||0),0));
-  document.getElementById('m1-nico').textContent=fmt(reservas.filter(r=>r.prop==='M1'&&r.semana==='Nico').reduce((s,r)=>s+(r.bruto||0),0));
-  document.getElementById('m1-res').textContent=reservas.filter(r=>r.prop==='M1').length;
+  document.getElementById('m1-admon').textContent=fmt(lista.filter(r=>r.prop==='M1').reduce((s,r)=>s+(r.mng_fee||r.neto*0.1||0),0));
+  document.getElementById('m1-nico').textContent=fmt(lista.filter(r=>r.prop==='M1'&&r.semana==='Nico').reduce((s,r)=>s+(r.bruto||0),0));
+  document.getElementById('m1-res').textContent=resProp.M1;
+  document.getElementById('m1-noches').textContent=nochesProp.M1;
   document.getElementById('l3-bruto').textContent=fmt(byProp.L3);
-  document.getElementById('l3-fee').textContent=fmt(reservas.filter(r=>r.prop==='L3'&&r.tipo==='Directo').reduce((s,r)=>s+(r.neto||0)*0.1,0));
-  document.getElementById('l3-res').textContent=reservas.filter(r=>r.prop==='L3').length;
+  document.getElementById('l3-fee').textContent=fmt(lista.filter(r=>r.prop==='L3'&&r.tipo==='Directo').reduce((s,r)=>s+(r.neto||0)*0.1,0));
+  document.getElementById('l3-res').textContent=resProp.L3;
+  document.getElementById('l3-noches').textContent=nochesProp.L3;
   document.getElementById('h4-bruto').textContent=fmt(byProp.H4);
-  document.getElementById('h4-admon').textContent=fmt(reservas.filter(r=>r.prop==='H4').reduce((s,r)=>s+(r.mng_fee||0),0));
-  document.getElementById('h4-res').textContent=reservas.filter(r=>r.prop==='H4').length;
+  document.getElementById('h4-admon').textContent=fmt(lista.filter(r=>r.prop==='H4').reduce((s,r)=>s+(r.mng_fee||0),0));
+  document.getElementById('h4-res').textContent=resProp.H4;
+
+  // Pendientes banner
   const pend=reservas.filter(r=>r.estado_pago==='pendiente'||r.estado_pago==='abono');
   const banner=document.getElementById('pendientes-banner');
   if(pend.length>0){banner.style.display='flex';document.getElementById('pendientes-txt').textContent=pend.length+' reserva(s) pendientes de pago — ve al Historial y liquídalas';}
   else banner.style.display='none';
+
+  // Charts
+  renderChartIngresos();
+  renderChartProp(byProp);
+}
+
+function renderChartIngresos(){
+  // Last 12 months data
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now=new Date();
+  const labels=[], dataGO=[], dataM1=[], dataL3=[], dataH4=[];
+  for(let i=11;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const y=d.getFullYear(),m=d.getMonth();
+    const mesStr=`${y}-${String(m+1).padStart(2,'0')}`;
+    labels.push(meses[m]+' '+String(y).slice(2));
+    const fil=r=>r.entrada&&r.entrada.startsWith(mesStr)&&r.estado_pago!=='no_paga';
+    dataGO.push(Math.round(reservas.filter(r=>r.prop==='GO'&&fil(r)).reduce((s,r)=>s+(r.bruto||0),0)/1000));
+    dataM1.push(Math.round(reservas.filter(r=>r.prop==='M1'&&fil(r)).reduce((s,r)=>s+(r.bruto||0),0)/1000));
+    dataL3.push(Math.round(reservas.filter(r=>r.prop==='L3'&&fil(r)).reduce((s,r)=>s+(r.bruto||0),0)/1000));
+    dataH4.push(Math.round(reservas.filter(r=>r.prop==='H4'&&fil(r)).reduce((s,r)=>s+(r.bruto||0),0)/1000));
+  }
+  const canvas=document.getElementById('chart-ingresos');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  if(chartIngresos)chartIngresos.destroy();
+  chartIngresos=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'GO Living',data:dataGO,backgroundColor:'#1A5276CC',borderRadius:3},
+        {label:'Villa M1',data:dataM1,backgroundColor:'#1E8449CC',borderRadius:3},
+        {label:'Villa L3',data:dataL3,backgroundColor:'#C0392BCC',borderRadius:3},
+        {label:'Villa H4',data:dataH4,backgroundColor:'#7D3C98CC',borderRadius:3},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.raw.toLocaleString('es-CO')}k`}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,ticks:{callback:v=>'$'+v+'k',font:{size:10}},grid:{color:'#F0EDE8'}}}
+    }
+  });
+}
+
+function renderChartProp(byProp){
+  const props=[
+    {key:'GO',label:'GO Living',color:'var(--go)'},
+    {key:'M1',label:'Villa M1',color:'var(--m1)'},
+    {key:'L3',label:'Villa L3',color:'var(--l3)'},
+    {key:'H4',label:'Villa H4',color:'var(--h4)'},
+  ];
+  const max=Math.max(...props.map(p=>byProp[p.key]||0))||1;
+  const cont=document.getElementById('chart-prop-bars');
+  if(!cont)return;
+  cont.innerHTML=props.map(p=>{
+    const val=byProp[p.key]||0;
+    const pct=Math.round(val/max*100);
+    const pctTotal=max>0?Math.round(val/Object.values(byProp).reduce((a,b)=>a+b,0)*100)||0:0;
+    return`<div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500">
+          <span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block"></span>${p.label}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:var(--text-3)">${pctTotal}%</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600">${fmt(val)}</span>
+        </div>
+      </div>
+      <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;">
+        <div style="background:${p.color};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s ease;"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function estadoHtml(e){const m={'pagado':'pagado','pendiente':'pendiente','abono':'abono','no_paga':'no paga'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;}
