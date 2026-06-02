@@ -213,11 +213,23 @@
     <!-- PERÍODO SELECTOR -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:14px;font-weight:600;color:var(--text)">Resumen de gestión</div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-sm" id="db-btn-mes" onclick="setPeriodo('mes')" style="background:var(--text);color:#fff;border:none">Mes actual</button>
         <button class="btn btn-secondary btn-sm" id="db-btn-3m" onclick="setPeriodo('3m')">Últimos 3M</button>
         <button class="btn btn-secondary btn-sm" id="db-btn-anio" onclick="setPeriodo('anio')">Año actual</button>
         <button class="btn btn-secondary btn-sm" id="db-btn-todo" onclick="setPeriodo('todo')">Histórico</button>
+        <button class="btn btn-secondary btn-sm" id="db-btn-custom" onclick="setPeriodo('custom')">📅 Mes específico</button>
+        <div id="db-custom-wrap" style="display:none;align-items:center;gap:6px;">
+          <select id="db-custom-mes" onchange="renderDashboard()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select id="db-custom-anio" onchange="renderDashboard()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+            <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -235,6 +247,21 @@
       <div id="chart-container" style="width:100%;overflow-x:auto;">
         <canvas id="chart-ingresos" height="200"></canvas>
       </div>
+    </div>
+
+    <!-- GRÁFICA INGRESOS POR SOCIO -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><i class="ti ti-users"></i> Ingresos por socio — período seleccionado</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <select id="db-socio-prop" onchange="renderChartSocios()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;">
+          <option value="">Todas las propiedades</option>
+          <option value="GO">GO Living</option>
+          <option value="M1">Villa M1</option>
+          <option value="L3">Villa L3</option>
+          <option value="H4">Villa H4</option>
+        </select>
+      </div>
+      <div id="chart-socios-bars"></div>
     </div>
 
     <!-- GRÁFICA INGRESOS POR PROPIEDAD -->
@@ -1103,10 +1130,19 @@ let chartIngresos=null;
 
 function setPeriodo(p){
   dbPeriodo=p;
-  ['mes','3m','anio','todo'].forEach(x=>{
+  ['mes','3m','anio','todo','custom'].forEach(x=>{
     const btn=document.getElementById('db-btn-'+x);
-    if(btn){btn.className=x===p?'btn btn-sm':'btn btn-secondary btn-sm';if(x===p)btn.style.background='var(--text)',btn.style.color='#fff',btn.style.border='none';else btn.style.background='',btn.style.color='',btn.style.border='';}
+    if(!btn)return;
+    if(x===p){btn.style.background='var(--text)';btn.style.color='#fff';btn.style.border='none';}
+    else{btn.style.background='';btn.style.color='';btn.style.border='';}
   });
+  const wrap=document.getElementById('db-custom-wrap');
+  if(wrap)wrap.style.display=p==='custom'?'flex':'none';
+  if(p==='custom'){
+    const now=new Date();
+    document.getElementById('db-custom-mes').value=now.getMonth()+1;
+    document.getElementById('db-custom-anio').value=now.getFullYear();
+  }
   renderDashboard();
 }
 
@@ -1116,15 +1152,27 @@ function getPeriodoRange(){
   if(dbPeriodo==='mes') return {desde:`${y}-${String(m+1).padStart(2,'0')}-01`,hasta:`${y}-${String(m+1).padStart(2,'0')}-31`};
   if(dbPeriodo==='3m'){const d=new Date(now);d.setMonth(d.getMonth()-3);return {desde:d.toISOString().slice(0,10),hasta:now.toISOString().slice(0,10)};}
   if(dbPeriodo==='anio') return {desde:`${y}-01-01`,hasta:`${y}-12-31`};
+  if(dbPeriodo==='custom'){
+    const cm=parseInt(document.getElementById('db-custom-mes')?.value||(m+1));
+    const cy=parseInt(document.getElementById('db-custom-anio')?.value||y);
+    const lastDay=new Date(cy,cm,0).getDate();
+    return {desde:`${cy}-${String(cm).padStart(2,'0')}-01`,hasta:`${cy}-${String(cm).padStart(2,'0')}-${lastDay}`};
+  }
   return {desde:'2000-01-01',hasta:'2099-12-31'};
 }
 
 function getPeriodoLabel(){
   const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const mesesFull=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const now=new Date();
   if(dbPeriodo==='mes') return meses[now.getMonth()]+' '+now.getFullYear();
   if(dbPeriodo==='3m') return 'Últimos 3 meses';
   if(dbPeriodo==='anio') return 'Año '+now.getFullYear();
+  if(dbPeriodo==='custom'){
+    const cm=parseInt(document.getElementById('db-custom-mes')?.value||1);
+    const cy=parseInt(document.getElementById('db-custom-anio')?.value||now.getFullYear());
+    return mesesFull[cm-1]+' '+cy;
+  }
   return 'Histórico completo';
 }
 
@@ -1179,6 +1227,67 @@ function renderDashboard(){
   // Charts
   renderChartIngresos();
   renderChartProp(byProp);
+  renderChartSocios();
+}
+
+function renderChartSocios(){
+  const {desde,hasta}=getPeriodoRange();
+  const propFiltro=document.getElementById('db-socio-prop')?.value||'';
+  let lista=reservas.filter(r=>r.entrada>=desde&&r.entrada<=hasta&&r.estado_pago!=='no_paga');
+  if(propFiltro) lista=lista.filter(r=>r.prop===propFiltro);
+
+  const socios={
+    'Sergio Arango':0,'Juan David Bridge':0,'Nicolás Velásquez':0,
+    'Alejandro Londoño':0,'Santiago Arango':0
+  };
+  const avColors={
+    'Sergio Arango':'#1A5276','Juan David Bridge':'#D35400',
+    'Nicolás Velásquez':'#148F77','Alejandro Londoño':'#2D6A4F','Santiago Arango':'#7D3C98'
+  };
+
+  lista.forEach(r=>{
+    if(r.pago_sapema!==null&&r.pago_sapema!==undefined&&r.estado_pago==='pagado'){
+      socios['Sergio Arango']+=(r.pago_sapema||0)+(r.mng_fee||0);
+      socios['Juan David Bridge']+=(r.pago_jdbj||0);
+      socios['Santiago Arango']+=(r.pago_sar||0);
+      if(r.prop==='M1'&&r.semana==='Nico') socios['Nicolás Velásquez']+=(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
+      if(r.prop==='L3') socios['Alejandro Londoño']+=(r.pago_jdbj||0);
+    } else {
+      getDistrib(r).filter(d=>d.t==='ingreso').forEach(d=>{
+        Object.keys(socios).forEach(s=>{if(d.n.includes(s.split(' ')[0])&&d.n.includes(s.split(' ')[1]))socios[s]+=d.v;});
+      });
+    }
+  });
+
+  const entries=Object.entries(socios).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const max=entries.length?entries[0][1]:1;
+  const total=entries.reduce((s,[,v])=>s+v,0);
+
+  const cont=document.getElementById('chart-socios-bars');
+  if(!cont)return;
+  if(!entries.length){cont.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--text-3)">Sin datos para este período.</div>';return;}
+
+  cont.innerHTML=entries.map(([nombre,val])=>{
+    const pct=Math.round(val/max*100);
+    const pctTotal=total>0?Math.round(val/total*100):0;
+    const color=avColors[nombre]||'var(--text)';
+    const initials=nombre.split(' ').map(x=>x[0]).join('').slice(0,2);
+    return`<div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500">
+          <span style="width:26px;height:26px;border-radius:50%;background:${color}22;color:${color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${initials}</span>
+          ${nombre}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:var(--text-3)">${pctTotal}% del total</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--green)">${fmt(val)}</span>
+        </div>
+      </div>
+      <div style="background:var(--border-light);border-radius:4px;height:10px;overflow:hidden;">
+        <div style="background:${color};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s ease;opacity:0.85;"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderChartIngresos(){
