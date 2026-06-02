@@ -362,7 +362,7 @@
       </div>
       <div class="form-grid">
         <div class="form-group"><label>Valor bruto (COP)</label><input type="number" id="r-bruto" placeholder="0" oninput="calcDistrib()"></div>
-        <div class="form-group">
+        <div class="form-group" id="x-comision-auto">
           <label id="lbl-comision">Comisión plataforma</label>
           <input type="text" id="r-comision-display" readonly placeholder="Se calcula automático">
           <input type="hidden" id="r-comision">
@@ -813,21 +813,25 @@ function calcDistrib(){
       xCruzada.style.display='block';
       btnCruzada.style.display='inline-flex';
       btnNormal.style.display='none';
+      document.getElementById('x-m1-normal').style.display='none';
       document.getElementById('cr-nico-noches').value=cr.nicoNoches;
       document.getElementById('cr-bolsa-noches').value=cr.bolsaNoches;
       document.getElementById('cr-nico-label').textContent=cr.nicoLabel;
       document.getElementById('cr-bolsa-label').textContent=cr.bolsaLabel;
-      // Update semana selector to reflect detection
       document.getElementById('r-semana').value='bolsa';
       document.getElementById('x-santi-m1-wrap').style.opacity='1';
       document.getElementById('x-santi-m1-wrap').style.pointerEvents='auto';
       document.getElementById('distrib-box').style.display='none';
+      // Hide normal comision field - handled per block
+      document.getElementById('x-comision-auto').style.display='none';
       calcCruzada();
       return;
     } else {
       xCruzada.style.display='none';
       btnCruzada.style.display='none';
       btnNormal.style.display='inline-flex';
+      document.getElementById('x-m1-normal').style.display='flex';
+      document.getElementById('x-comision-auto').style.display='block';
     }
   }
 
@@ -1050,6 +1054,8 @@ function limpiarForm(){
   ['x-m1','x-h4','x-go','x-fee-resort','x-l3-directo','distrib-box','x-cruzada','cr-distrib'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   document.getElementById('btn-guardar').style.display='inline-flex';
   document.getElementById('btn-guardar-cruzada').style.display='none';
+  const xca=document.getElementById('x-comision-auto');if(xca)xca.style.display='block';
+  const xm1n=document.getElementById('x-m1-normal');if(xm1n)xm1n.style.display='flex';
   ['cr-nico-valor-display','cr-bolsa-valor-display','cr-nico-fee-custom-display'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['cr-nico-valor','cr-bolsa-valor','cr-nico-fee-custom'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
