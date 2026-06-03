@@ -1021,6 +1021,7 @@ async function guardarReserva(){
   if(btn.disabled)return;
   const comision=parseFloat(document.getElementById('r-comision').value)||0;
   const noches=getNights(e,s);
+  const personas=parseInt(document.getElementById('r-personas').value)||1;
   const aseo=p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0;
   const semana=p==='M1'?document.getElementById('r-semana').value:null;
   const santi_m1=p==='M1'?document.getElementById('r-santi-m1').value:null;
@@ -1033,7 +1034,7 @@ async function guardarReserva(){
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
     await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
-    showMsg('r-msg','Reserva guardada como Pendiente. Liquídala cuando cobres.','success');
+    showMsg('r-msg',esUsoSocio?'Uso de socio registrado 🏠':'Reserva guardada como Pendiente. Liquídala cuando cobres.','success');
     // Show send to Naio button for Palomino properties
     if(['M1','L3','H4'].includes(p)){
       const msgEl=document.getElementById('r-msg');
