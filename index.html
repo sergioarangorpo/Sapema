@@ -990,7 +990,8 @@ async function guardarReserva(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const h=document.getElementById('r-huesped').value,e=document.getElementById('r-entrada').value,s=document.getElementById('r-salida').value;
   const bruto=parseFloat(document.getElementById('r-bruto').value)||0;
-  if(!p||!t||!e||!s||bruto===0){showMsg('r-msg','Completa todos los campos obligatorios.','info');return;}
+  const estadoVal=document.getElementById('r-estado').value;
+  if(!p||!t||!e||!s||(bruto===0&&estadoVal!=='no_paga')){showMsg('r-msg','Completa todos los campos. Si es uso de socio selecciona "No paga".','info');return;}
   // Anti-duplicate: misma propiedad + misma entrada + mismo huésped
   const duplicado=reservas.find(r=>r.prop===p&&r.entrada===e&&r.huesped&&r.huesped.toLowerCase()===h.toLowerCase());
   if(duplicado){showMsg('r-msg','Ya existe una reserva para esta propiedad, huésped y fecha. Verifica en el Historial.','danger');return;}
