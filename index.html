@@ -419,6 +419,26 @@
           </div>
         </div>
       </div>
+      <!-- TOGGLE USO DE SOCIO -->
+      <div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;color:var(--blue);">
+          <span class="toggle" style="flex-shrink:0;">
+            <input type="checkbox" id="r-uso-socio" onchange="toggleUsoSocio()">
+            <span class="toggle-slider"></span>
+          </span>
+          🏠 Uso de socio / propietario
+        </label>
+        <div id="x-socio-selector" style="display:none;">
+          <select id="r-socio-nombre" onchange="onSocioChange()" style="font-size:13px;padding:6px 10px;border:1px solid #B8D4E8;border-radius:var(--radius-sm);background:#fff;color:var(--text);font-family:'DM Sans',sans-serif;">
+            <option value="">Seleccionar socio...</option>
+            <option value="SERGIO ARANGO">SERGIO ARANGO</option>
+            <option value="ALEJANDRO LONDOÑO">ALEJANDRO LONDOÑO</option>
+            <option value="JUAN DAVID BRIDGE">JUAN DAVID BRIDGE</option>
+            <option value="SANTIAGO ARANGO">SANTIAGO ARANGO</option>
+            <option value="NICOLÁS VELÁSQUEZ">NICOLÁS VELÁSQUEZ</option>
+          </select>
+        </div>
+      </div>
       <div class="form-grid">
         <div class="form-group"><label>Huésped / concepto</label><input type="text" id="r-huesped" placeholder="Nombre o concepto" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="form-group"><label>N° personas</label><input type="number" id="r-personas" min="1" value="2" oninput="calcDistrib()"></div>
@@ -863,7 +883,7 @@ async function guardarCruzada(){
       prop:'M1',tipo,huesped:huesped.toUpperCase(),entrada,salida,
       bruto:nicoValor,comision:0,comision_pasarela:0,neto:nicoValor,
       personas,noches:nicoNoches,aseo:0,semana:'Nico',santi_m1:null,
-      fee_resort_historico:feeResort,estado_pago:'pendiente'
+      fee_resort_historico:feeResort,estado_pago:esUsoSocio?'no_paga':'pendiente'
     })});
     // Save Bolsa block
     await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({
@@ -881,7 +901,7 @@ function onTipoChange(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const sem=document.getElementById('r-semana')?document.getElementById('r-semana').value:'';
   const h4m=document.getElementById('r-h4-modo')?document.getElementById('r-h4-modo').value:'';
-  document.getElementById('x-fee-resort').style.display=((p==='M1'&&sem==='Nico')||(p==='H4'&&h4m==='retiro'))?'block':'none';
+  const _uso=document.getElementById('r-uso-socio').checked;document.getElementById('x-fee-resort').style.display=(!_uso&&((p==='M1'&&sem==='Nico')||(p==='H4'&&h4m==='retiro')))?'block':'none';
   document.getElementById('x-l3-directo').style.display=(p==='L3'&&t==='Directo')?'block':'none';
   const lbl=document.getElementById('lbl-comision');
   if(t==='Booking')lbl.textContent='Comisión Booking (18% — automático)';
@@ -990,10 +1010,12 @@ async function guardarReserva(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const h=document.getElementById('r-huesped').value,e=document.getElementById('r-entrada').value,s=document.getElementById('r-salida').value;
   const bruto=parseFloat(document.getElementById('r-bruto').value)||0;
-  const estadoVal=document.getElementById('r-estado').value;
-  if(!p||!t||!e||!s||(bruto===0&&estadoVal!=='no_paga')){showMsg('r-msg','Completa todos los campos. Si es uso de socio selecciona "No paga".','info');return;}
-  // Anti-duplicate: misma propiedad + misma entrada + mismo huésped
-  const duplicado=reservas.find(r=>r.prop===p&&r.entrada===e&&r.huesped&&r.huesped.toLowerCase()===h.toLowerCase());
+  const esUsoSocio=document.getElementById('r-uso-socio').checked;
+  if(!p||!t||!e||!s){showMsg('r-msg','Completa propiedad, plataforma y fechas.','info');return;}
+  if(!esUsoSocio&&bruto===0){showMsg('r-msg','Ingresa el valor bruto. Para uso de socio activa el toggle 🏠.','info');return;}
+  if(esUsoSocio&&!document.getElementById('r-socio-nombre').value){showMsg('r-msg','Selecciona el socio que usará la propiedad.','info');return;}
+  // Anti-duplicate: solo si hay huésped ingresado
+  const duplicado=h?reservas.find(r=>r.prop===p&&r.entrada===e&&r.huesped&&r.huesped.toLowerCase()===h.toLowerCase()):null;
   if(duplicado){showMsg('r-msg','Ya existe una reserva para esta propiedad, huésped y fecha. Verifica en el Historial.','danger');return;}
   const btn=document.getElementById('btn-guardar');
   if(btn.disabled)return;
@@ -1007,7 +1029,7 @@ async function guardarReserva(){
   const gestor=p==='L3'&&t==='Directo'?(document.getElementById('r-gestor')||{}).value:null;
   const neto=round2(bruto-comision);
   let feeResort=0;
-  if((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro'))feeResort=getFeeResort();
+  if(!esUsoSocio&&((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')))feeResort=getFeeResort();
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
     await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
@@ -1142,7 +1164,34 @@ function showMsg(elId,txt,tipo){
   el.style.display='flex';el.className='alert alert-'+tipo;el.innerHTML='<i class="ti ti-'+(tipo==='success'?'check':'alert-circle')+'"></i>'+txt;
   if(tipo!=='danger')setTimeout(()=>{el.style.display='none';},15000);
 }
+function toggleUsoSocio(){
+  const es=document.getElementById('r-uso-socio').checked;
+  document.getElementById('x-socio-selector').style.display=es?'block':'none';
+  if(es){document.getElementById('x-fee-resort').style.display='none';document.getElementById('distrib-box').style.display='none';}
+  // Ocultar/mostrar campos monetarios
+  const camposOcultar=['r-bruto','r-aseo'];
+  camposOcultar.forEach(id=>{const el=document.getElementById(id);if(el)el.closest('.form-group').style.opacity=es?'0.4':'1';});
+  if(es){
+    document.getElementById('r-bruto').value='0';
+    document.getElementById('r-huesped').value='';
+    // Ocultar distribución
+    document.getElementById('distrib-box').style.display='none';
+  }else{
+    document.getElementById('r-huesped').value='';
+    document.getElementById('r-bruto').value='';
+    ['r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.closest('.form-group').style.opacity='1';});
+  }
+}
+function onSocioChange(){
+  const nombre=document.getElementById('r-socio-nombre').value;
+  if(nombre)document.getElementById('r-huesped').value=nombre;
+}
 function limpiarForm(){
+  // Reset uso-socio toggle
+  const usoSocioEl=document.getElementById('r-uso-socio');if(usoSocioEl){usoSocioEl.checked=false;}
+  const socioSelEl=document.getElementById('x-socio-selector');if(socioSelEl)socioSelEl.style.display='none';
+  const socioNomEl=document.getElementById('r-socio-nombre');if(socioNomEl)socioNomEl.value='';
+  ['r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.closest('.form-group').style.opacity='1';});
   ['r-prop','r-tipo','r-huesped','r-entrada','r-salida','r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('r-personas').value='2';document.getElementById('r-comision').value='';document.getElementById('r-comision-display').value='';
   ['x-m1','x-h4','x-go','x-fee-resort','x-l3-directo','distrib-box','x-cruzada','cr-distrib'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
