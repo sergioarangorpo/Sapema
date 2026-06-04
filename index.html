@@ -788,7 +788,7 @@ function applyRoleUI(){
   // Header: mostrar nombre y logout
   document.getElementById('conn-status').innerHTML=
     '<span style="font-size:12px;color:#aaa;margin-right:10px">'+currentUser.nombre+'</span>'+
-    '<button onclick="doLogout()" style="font-size:11px;padding:4px 10px;border:1px solid #555;border-radius:20px;background:transparent;color:#aaa;cursor:pointer;font-family:'DM Sans',sans-serif;">Salir</button>';
+    '<button onclick="doLogout()" style="font-size:11px;padding:4px 10px;border:1px solid #555;border-radius:20px;background:transparent;color:#aaa;cursor:pointer;font-family:sans-serif;">Salir</button>';
   // Ocultar pestaña Socios si no es admin
   const btnSocios=document.querySelector('[onclick*=socios]');
   if(btnSocios)btnSocios.style.display=esAdmin?'':'none';
