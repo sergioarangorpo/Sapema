@@ -377,9 +377,9 @@
       <div id="x-h4" style="display:none">
         <div class="form-grid">
           <div class="form-group"><label>Modo H4</label>
-            <select id="r-h4-modo" onchange="onTipoChange()">
-              <option value="hotel">Hotel — ingreso trimestral</option>
-              <option value="retiro">Retiro — alquiler directo</option>
+            <select id="r-h4-modo" onchange="onH4ModoChange()">
+              <option value="hotel">🏨 Bolsa trimestral Oxo</option>
+              <option value="retiro">🏕️ Retiro — alquiler directo</option>
             </select>
           </div>
           <div class="form-group"><label>¿Santiago aportó H4 este período?</label>
@@ -387,6 +387,44 @@
               <option value="si">Sí — participa</option>
               <option value="no">No — no participa</option>
             </select>
+          </div>
+        </div>
+        <!-- BOLSA TRIMESTRAL -->
+        <div id="x-h4-bolsa" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--h4);margin-bottom:12px;">🏨 Bolsa trimestral Hotel Oxo</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Trimestre</label>
+              <select id="r-h4-trimestre" onchange="calcDistribH4()">
+                <option value="T1">T1 — Enero a Marzo</option>
+                <option value="T2" selected>T2 — Abril a Junio</option>
+                <option value="T3">T3 — Julio a Septiembre</option>
+                <option value="T4">T4 — Octubre a Diciembre</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Año</label>
+              <select id="r-h4-anio" onchange="calcDistribH4()">
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+                <option value="2027">2027</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Valor total recibido de Oxo (COP)</label>
+              <input type="number" id="r-h4-total" placeholder="0" oninput="calcDistribH4()">
+            </div>
+          </div>
+          <!-- Distribución H4 -->
+          <div id="distrib-h4" style="display:none;background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-size:13px;">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);margin-bottom:8px;">Distribución</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div>JD Bridge <span style="color:var(--text-3);font-size:11px">(50%)</span></div><div id="dh4-jd" style="text-align:right;font-weight:500">—</div>
+              <div>Sergio Arango <span style="color:var(--text-3);font-size:11px">(25%)</span></div><div id="dh4-ser" style="text-align:right;font-weight:500">—</div>
+              <div id="dh4-santi-label">Santiago Arango <span style="color:var(--text-3);font-size:11px">(25%)</span></div><div id="dh4-santi" style="text-align:right;font-weight:500">—</div>
+            </div>
           </div>
         </div>
       </div>
@@ -860,6 +898,60 @@ function showSection(id,btn){
   if(id==='calendario'){initCalendario();renderDisponibilidad();}
 }
 
+
+function onH4ModoChange(){
+  const modo=document.getElementById('r-h4-modo').value;
+  const esBolsa=modo==='hotel';
+  document.getElementById('x-h4-bolsa').style.display=esBolsa?'block':'none';
+  // campos normales de reserva
+  const camposReserva=['r-entrada','r-salida','r-bruto','r-aseo','r-personas'];
+  camposReserva.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){
+      const wrap=el.closest('.form-group')||el.closest('div');
+      if(wrap)wrap.style.opacity=esBolsa?'0.3':'1';
+      if(esBolsa)el.value='';
+    }
+  });
+  if(esBolsa){
+    // fechas automáticas según trimestre
+    setFechasTrimestre();
+  }
+  onTipoChange();
+}
+
+function setFechasTrimestre(){
+  const t=document.getElementById('r-h4-trimestre').value;
+  const y=document.getElementById('r-h4-anio').value;
+  const fechas={T1:[`${y}-01-01`,`${y}-03-31`],T2:[`${y}-04-01`,`${y}-06-30`],T3:[`${y}-07-01`,`${y}-09-30`],T4:[`${y}-10-01`,`${y}-12-31`]};
+  const [ini,fin]=fechas[t]||[];
+  if(ini)document.getElementById('r-entrada').value=ini;
+  if(fin)document.getElementById('r-salida').value=fin;
+}
+
+function calcDistribH4(){
+  setFechasTrimestre();
+  const total=parseFloat(document.getElementById('r-h4-total').value)||0;
+  const santi=document.getElementById('r-santi-h4').value;
+  const box=document.getElementById('distrib-h4');
+  if(total===0){box.style.display='none';return;}
+  box.style.display='block';
+  let jd,ser,san;
+  if(santi==='si'){
+    jd=total*0.50; ser=total*0.25; san=total*0.25;
+    document.getElementById('dh4-santi-label').innerHTML='Santiago Arango <span style="color:var(--text-3);font-size:11px">(25%)</span>';
+  } else {
+    // Sin Santiago: JD 66.67%, Sergio 33.33%
+    jd=total*(2/3); ser=total*(1/3); san=0;
+    document.getElementById('dh4-santi-label').innerHTML='Santiago Arango <span style="color:var(--text-3);font-size:11px">(no aportó)</span>';
+  }
+  document.getElementById('dh4-jd').textContent=fmt(jd);
+  document.getElementById('dh4-ser').textContent=fmt(ser);
+  document.getElementById('dh4-santi').textContent=santi==='si'?fmt(san):'$0';
+  // Actualizar r-bruto con el total para que guardarReserva lo tome
+  document.getElementById('r-bruto').value=total;
+}
+
 function onPropChange(){
   const p=document.getElementById('r-prop').value;
   const sel=document.getElementById('r-tipo');
@@ -1146,8 +1238,15 @@ async function guardarReserva(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const h=document.getElementById('r-huesped').value,e=document.getElementById('r-entrada').value,s=document.getElementById('r-salida').value;
   const bruto=parseFloat(document.getElementById('r-bruto').value)||0;
-  const esUsoSocio=document.getElementById('r-uso-socio').checked;
-  if(!p||!t||!e||!s){showMsg('r-msg','Completa propiedad, plataforma y fechas.','info');return;}
+  const esUsoSocio=document.getElementById('r-uso-socio').checked&&!esBolsaH4_v;
+  const esBolsaH4_v=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
+  if(!esBolsaH4_v&&(!p||!t||!e||!s)){showMsg('r-msg','Completa propiedad, plataforma y fechas.','info');return;}
+  if(esBolsaH4_v&&!p){showMsg('r-msg','Selecciona la propiedad.','info');return;}
+  // Si es bolsa H4, no aplica esUsoSocio
+  if(esBolsaH4_v){
+    const totalBolsa=parseFloat(document.getElementById('r-h4-total').value)||0;
+    if(totalBolsa===0){showMsg('r-msg','Ingresa el valor total recibido de Oxo.','info');return;}
+  }
   if(!esUsoSocio&&bruto===0){showMsg('r-msg','Ingresa el valor bruto. Para uso de socio activa el toggle 🏠.','info');return;}
   if(esUsoSocio&&!document.getElementById('r-socio-nombre').value){showMsg('r-msg','Selecciona el socio que usará la propiedad.','info');return;}
   // Anti-duplicate: solo para reservas comerciales, no para uso de socio
@@ -1171,8 +1270,17 @@ async function guardarReserva(){
   if(!esUsoSocio&&((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')))feeResort=getFeeResort();
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
-    await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({prop:p,tipo:t,huesped:h,entrada:e,salida:s,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches,aseo,semana,santi_m1,santi_h4,h4_modo,temporada:'baja',gestor,fee_resort_historico:feeResort,estado_pago:'pendiente'})});
-    showMsg('r-msg',esUsoSocio?'Uso de socio registrado 🏠':'Reserva guardada como Pendiente. Liquídala cuando cobres.','success');
+    await supaFetch('/rest/v1/reservas',{method:'POST',body:(()=>{
+      const esBolsaH4=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
+      const trimestre=esBolsaH4?(document.getElementById('r-h4-trimestre').value+'-'+document.getElementById('r-h4-anio').value):null;
+      const huesped_final=esBolsaH4?('BOLSA OXO '+trimestre):h;
+      return JSON.stringify({prop:p,tipo:t,huesped:huesped_final,entrada:e,salida:s,bruto,comision:esBolsaH4?0:comision,comision_pasarela:0,neto:esBolsaH4?bruto:neto,personas:esBolsaH4?1:parseInt(document.getElementById('r-personas').value)||1,noches,aseo:esBolsaH4?0:aseo,semana,santi_m1,santi_h4,h4_modo,temporada:esBolsaH4?trimestre:'baja',gestor,fee_resort_historico:0,estado_pago:esBolsaH4?'pagado':esUsoSocio?'no_paga':'pendiente'});
+    })()});
+    (()=>{
+      const esBolsaH4=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
+      const trim=esBolsaH4?(document.getElementById('r-h4-trimestre').value+'-'+document.getElementById('r-h4-anio').value):'';
+      showMsg('r-msg',esBolsaH4?'🏨 Bolsa trimestral '+trim+' registrada correctamente':esUsoSocio?'Uso de socio registrado 🏠':'Reserva guardada como Pendiente. Liquídala cuando cobres.','success');
+    })();
     // Show send to Naio button for Palomino properties
     if(['M1','L3','H4'].includes(p)){
       const msgEl=document.getElementById('r-msg');
@@ -1637,7 +1745,7 @@ function renderHistorial(){
       </select>`;
       return`<tr>
         <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:4px"></span>${PROPS[r.prop].nombre}</td>
-        <td>${r.huesped||'—'}</td>
+        <td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td>
         <td>${r.entrada||''}</td>
         <td>${r.noches||0}</td>
         <td>${r.tipo}</td>
@@ -1674,7 +1782,7 @@ function renderPendientes(){
   const cont=document.getElementById('pendientes-detalle');
   if(!lista.length){cont.innerHTML='<div style="text-align:center;padding:1rem;color:var(--text-3)">¡Todo pagado!</div>';return;}
   cont.innerHTML='<div class="table-wrap"><table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Estado</th><th>Bruto</th><th>Acción</th></tr></thead><tbody>'+
-    lista.map(r=>`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${estadoHtml(r.estado_pago)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td><button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button></td></tr>`).join('')+'</tbody></table></div>';
+    lista.map(r=>`<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:6px"></span>${PROPS[r.prop].nombre}</td><td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td><td>${r.entrada||''}</td><td>${estadoHtml(r.estado_pago)}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td><button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')"><i class="ti ti-coin"></i> Liquidar</button></td></tr>`).join('')+'</tbody></table></div>';
 }
 
 // ---- REPORTES ----
@@ -1706,7 +1814,7 @@ function generarCalNaio(){
   document.getElementById('naio-titulo').textContent=`Reservas ${meses[mes-1]} ${anio} — ${lista.length} reserva(s)`;
   document.getElementById('naio-tabla').innerHTML=lista.length?
     '<table><thead><tr>'+th('Check In','entrada')+th('Check Out','salida')+th('Noches','noches')+th('Huésped','huesped')+th('Personas','personas')+th('Villa','prop')+'</tr></thead><tbody>'+
-    lista.map(r=>`<tr><td>${r.entrada}</td><td>${r.salida||'—'}</td><td>${r.noches||0}</td><td>${r.huesped||'—'}</td><td>${r.personas||'—'}</td><td>${nombreVilla(r.prop)}</td></tr>`).join('')+
+    lista.map(r=>`<tr><td>${r.entrada}</td><td>${r.salida||'—'}</td><td>${r.noches||0}</td><td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td><td>${r.personas||'—'}</td><td>${nombreVilla(r.prop)}</td></tr>`).join('')+
     '</tbody></table>':
     '<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
   document.getElementById('naio-contenido').style.display='block';
@@ -1759,7 +1867,7 @@ function enviarNaio(){
   body+=`Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n`;
   body+=`${'─'.repeat(70)}\n`;
   lista.forEach(r=>{
-    body+=`${fmtDate(r.entrada)}\t${fmtDate(r.salida||r.entrada)}\t${r.noches||0}\t${r.huesped||'—'}\t${r.personas||0}\t${nombreVilla(r.prop)}\t0\n`;
+    body+=`${fmtDate(r.entrada)}\t${fmtDate(r.salida||r.entrada)}\t${r.noches||0}\t${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}\t${r.personas||0}\t${nombreVilla(r.prop)}\t0\n`;
   });
   body+=`\nGracias!!`;
   window.location.href=`mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -1820,7 +1928,7 @@ function generarReporte(){
 
   document.getElementById('rep-tabla').innerHTML=lista.length?
     '<table><thead><tr><th>Propiedad</th><th>Huésped</th><th>Entrada</th><th>Noches</th><th>Plataforma</th><th>Ingreso bruto</th><th>Tu parte</th><th>Estado</th></tr></thead><tbody>'+
-    lista.map(r=>`<tr><td>${PROPS[r.prop].nombre}</td><td>${r.huesped||'—'}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--green)">${fmt(getSocioValor(r,socio))}</td><td>${estadoHtml(r.estado_pago)}</td></tr>`).join('')+'</tbody></table>':
+    lista.map(r=>`<tr><td>${PROPS[r.prop].nombre}</td><td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td><td>${r.entrada||''}</td><td>${r.noches||0}</td><td>${r.tipo}</td><td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td><td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--green)">${fmt(getSocioValor(r,socio))}</td><td>${estadoHtml(r.estado_pago)}</td></tr>`).join('')+'</tbody></table>':
     '<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas en este período.</div>';
 
   document.getElementById('rep-pagos').innerHTML=`
@@ -1927,7 +2035,7 @@ function renderCalMes(prop, mes, anio, elId){
       const isNoPaga=r.estado_pago==='no_paga';
       const color=isNoPaga?'var(--orange)':'var(--text)';
       html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:11px;">
-        <span style="font-weight:500;color:${color}">${r.huesped||'—'}</span>
+        <span style="font-weight:500;color:${color}">${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</span>
         <span style="color:var(--text-3)">${r.entrada} → ${r.salida||'?'} (${r.noches||0}n)</span>
       </div>`;
     });
