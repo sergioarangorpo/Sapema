@@ -121,6 +121,24 @@
     .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
     input:checked + .toggle-slider { background: var(--green); }
     input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+    /* ── LOGIN ── */
+    #login-screen { position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center; }
+    .login-box { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.08); }
+    .login-logo { display:flex;align-items:center;gap:10px;margin-bottom:28px; }
+    .login-logo-icon { width:38px;height:38px;background:var(--text);border-radius:8px;display:flex;align-items:center;justify-content:center; }
+    .login-logo-icon span { font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:#fff; }
+    .login-logo-text h1 { font-size:18px;font-weight:600;letter-spacing:-0.3px; }
+    .login-logo-text p { font-size:11px;color:var(--text-3); }
+    .login-box label { font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);font-weight:500;display:block;margin-bottom:5px; }
+    .login-box input[type=email],.login-box input[type=password] { width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);margin-bottom:14px;outline:none;transition:border 0.15s; }
+    .login-box input:focus { border-color:var(--text); }
+    .login-btn { width:100%;padding:11px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;transition:opacity 0.15s; }
+    .login-btn:hover { opacity:0.85; }
+    .login-btn:disabled { opacity:0.5;cursor:not-allowed; }
+    #login-error { font-size:12px;color:var(--red);margin-top:10px;display:none;padding:8px 10px;background:var(--red-bg);border-radius:var(--radius-sm); }
+    .login-family { font-size:11px;color:var(--text-3);text-align:center;margin-top:20px; }
+
     /* REPORTE */
     .reporte-header { background: var(--text); color: #fff; border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
     .reporte-logo { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; margin-bottom: 4px; }
@@ -134,6 +152,28 @@
   </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon"><span>S</span></div>
+      <div class="login-logo-text"><h1>Sapema</h1><p>Sergio · Amalia · Pedro · María Adelaida</p></div>
+    </div>
+    <div>
+      <label>Correo electrónico</label>
+      <input type="email" id="login-email" placeholder="tucorreo@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div>
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar a Sapema</button>
+    <div id="login-error"></div>
+    <div class="login-family">Gestión de propiedades — Familia Arango</div>
+  </div>
+</div>
+
 
 <!-- MODAL EDITAR RESERVA -->
 <div class="modal-overlay" id="modal-edit">
@@ -684,13 +724,108 @@
 <script>
 const SUPA_URL='https://xcmzxafoogqapakejgwf.supabase.co';
 const SUPA_KEY='sb_publishable_FAFlhOmenvLMC1l1Q8nrlQ_uo2UE-t4';
-const HEADERS={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=minimal'};
+
+// ── ROLES ────────────────────────────────────────────────────────────────────
+const ROLES={
+  'sergioarangorpo@gmail.com':    {nombre:'Sergio Arango',    rol:'admin', props:['GO','M1','L3','H4']},
+  'mariajaramillo3@hotmail.com':  {nombre:'María Adelaida',   rol:'admin', props:['GO','M1','L3','H4']},
+  'jdbj83@gmail.com':             {nombre:'Juan David Bridge', rol:'socio', props:['M1','H4']},
+  'llondono1983@gmail.com':         {nombre:'Alejandro Londoño',rol:'socio', props:['L3']},
+  'arangorestreposantiago@gmail.com':{nombre:'Santiago Arango',rol:'socio', props:['M1','H4']},
+};
+let currentUser=null; // {email, nombre, rol, props}
+
+// ── AUTH HEADERS (se actualizan tras login) ───────────────────────────────────
+let AUTH_TOKEN=null;
+function getHeaders(){
+  const h={'Content-Type':'application/json','apikey':SUPA_KEY,'Prefer':'return=minimal'};
+  if(AUTH_TOKEN) h['Authorization']='Bearer '+AUTH_TOKEN;
+  else h['Authorization']='Bearer '+SUPA_KEY;
+  return h;
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const btn=document.getElementById('login-btn');
+  const errEl=document.getElementById('login-error');
+  errEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Ingresa tu correo y contraseña.';errEl.style.display='block';return;}
+  if(!ROLES[email]){errEl.textContent='Este correo no tiene acceso a Sapema.';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Entrando...';
+  try{
+    const res=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body:JSON.stringify({email,password:pass})
+    });
+    const data=await res.json();
+    if(!res.ok||data.error){errEl.textContent=data.error_description||'Correo o contraseña incorrectos.';errEl.style.display='block';return;}
+    AUTH_TOKEN=data.access_token;
+    currentUser={email,...ROLES[email]};
+    sessionStorage.setItem('sapema_token',AUTH_TOKEN);
+    sessionStorage.setItem('sapema_email',email);
+    applyRoleUI();
+    document.getElementById('login-screen').style.display='none';
+    await loadReservas();
+  }catch(e){errEl.textContent='Error de conexión. Intenta de nuevo.';errEl.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Entrar a Sapema';}
+}
+
+function doLogout(){
+  AUTH_TOKEN=null;currentUser=null;
+  sessionStorage.removeItem('sapema_token');
+  sessionStorage.removeItem('sapema_email');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-pass').value='';
+}
+
+function applyRoleUI(){
+  const esAdmin=currentUser.rol==='admin';
+  const props=currentUser.props;
+  // Header: mostrar nombre y logout
+  document.getElementById('conn-status').innerHTML=
+    '<span style="font-size:12px;color:#aaa;margin-right:10px">'+currentUser.nombre+'</span>'+
+    '<button onclick="doLogout()" style="font-size:11px;padding:4px 10px;border:1px solid #555;border-radius:20px;background:transparent;color:#aaa;cursor:pointer;font-family:'DM Sans',sans-serif;">Salir</button>';
+  // Ocultar pestaña Socios si no es admin
+  const btnSocios=document.querySelector('[onclick*=socios]');
+  if(btnSocios)btnSocios.style.display=esAdmin?'':'none';
+  // Filtrar propiedades en el selector de nueva reserva
+  const selProp=document.getElementById('r-prop');
+  if(selProp){
+    Array.from(selProp.options).forEach(opt=>{
+      if(!opt.value) return; // placeholder
+      const key=opt.value;
+      opt.style.display=props.includes(key)?'':'none';
+    });
+  }
+  // Filtrar select de reporte de socio — socios solo ven el suyo
+  if(!esAdmin){
+    const selSocio=document.getElementById('rep-socio');
+    if(selSocio){
+      Array.from(selSocio.options).forEach(opt=>{
+        opt.style.display=opt.text.toLowerCase().includes(currentUser.nombre.split(' ')[0].toLowerCase())?'':'none';
+      });
+      selSocio.value=Array.from(selSocio.options).find(o=>o.style.display!=='none')?.value||'';
+    }
+  }
+}
+
+// ── FILTRO DE RESERVAS POR ROL ────────────────────────────────────────────────
+function filtrarPorRol(lista){
+  if(!currentUser||currentUser.rol==='admin') return lista;
+  return lista.filter(r=>currentUser.props.includes(r.prop));
+}
+
+
 let reservas=[],liquidandoId=null,liquidandoReserva=null;
 const PROPS={GO:{nombre:'GO Living',color:'var(--go)'},M1:{nombre:'Villa M1',color:'var(--m1)'},L3:{nombre:'Villa L3',color:'var(--l3)'},H4:{nombre:'Villa H4',color:'var(--h4)'}};
 const TIPOS={GO:['Airbnb'],M1:['Airbnb','Booking','Directo'],L3:['Airbnb','Booking','Directo'],H4:['Hotel trimestral','Retiro directo']};
 
 async function supaFetch(path,opts={}){
-  const res=await fetch(SUPA_URL+path,{headers:HEADERS,...opts});
+  const res=await fetch(SUPA_URL+path,{headers:getHeaders(),...opts});
   if(!res.ok){
     const txt=await res.text();
     throw new Error(txt||'Error '+res.status);
@@ -702,7 +837,8 @@ async function supaFetch(path,opts={}){
 }
 async function loadReservas(){
   try{
-    reservas=await supaFetch('/rest/v1/reservas?select=*&order=entrada.desc');
+    const todas=await supaFetch('/rest/v1/reservas?select=*&order=entrada.desc');
+    reservas=filtrarPorRol(todas||[]);
     document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-ok"><i class="ti ti-circle-check"></i> Conectado — Sapema</div>';
     renderDashboard();
   }catch(e){document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-err"><i class="ti ti-alert-circle"></i> Sin conexión</div>';}
@@ -1014,9 +1150,11 @@ async function guardarReserva(){
   if(!p||!t||!e||!s){showMsg('r-msg','Completa propiedad, plataforma y fechas.','info');return;}
   if(!esUsoSocio&&bruto===0){showMsg('r-msg','Ingresa el valor bruto. Para uso de socio activa el toggle 🏠.','info');return;}
   if(esUsoSocio&&!document.getElementById('r-socio-nombre').value){showMsg('r-msg','Selecciona el socio que usará la propiedad.','info');return;}
-  // Anti-duplicate: solo si hay huésped ingresado
-  const duplicado=h?reservas.find(r=>r.prop===p&&r.entrada===e&&r.huesped&&r.huesped.toLowerCase()===h.toLowerCase()):null;
-  if(duplicado){showMsg('r-msg','Ya existe una reserva para esta propiedad, huésped y fecha. Verifica en el Historial.','danger');return;}
+  // Anti-duplicate: solo para reservas comerciales, no para uso de socio
+  if(!esUsoSocio){
+    const duplicado=h?reservas.find(r=>r.prop===p&&r.entrada===e&&r.huesped&&r.huesped.toLowerCase()===h.toLowerCase()):null;
+    if(duplicado){showMsg('r-msg','Ya existe una reserva para esta propiedad, huésped y fecha. Verifica en el Historial.','danger');return;}
+  }
   const btn=document.getElementById('btn-guardar');
   if(btn.disabled)return;
   const comision=parseFloat(document.getElementById('r-comision').value)||0;
@@ -1918,7 +2056,19 @@ function renderCalendario(){
     `<div class="cal-month">${meses[parseInt(m)]}</div>`+ws.map(w=>`<div class="cal-week"><span class="cal-dot" style="background:${w.color}"></span><span class="cal-sem">${w.sem}</span><span class="cal-dates">${f2(w.s)} → ${f2(w.e)}</span><span class="cal-prop">${w.prop}</span></div>`).join('')).join('');
 }
 
-loadReservas();
+// ── INIT: restaurar sesión o mostrar login ────────────────────────────────────
+(function initApp(){
+  const savedToken=sessionStorage.getItem('sapema_token');
+  const savedEmail=sessionStorage.getItem('sapema_email');
+  if(savedToken&&savedEmail&&ROLES[savedEmail]){
+    AUTH_TOKEN=savedToken;
+    currentUser={email:savedEmail,...ROLES[savedEmail]};
+    applyRoleUI();
+    document.getElementById('login-screen').style.display='none';
+    loadReservas();
+  }
+  // Si no hay sesión, el login-screen ya está visible por defecto
+})();
 </script>
 </body>
 </html>
