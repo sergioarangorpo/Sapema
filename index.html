@@ -772,6 +772,7 @@ const ROLES={
   'arangorestreposantiago@gmail.com':{nombre:'Santiago Arango',rol:'socio', props:['M1','H4']},
 };
 let currentUser=null; // {email, nombre, rol, props}
+let todasReservas=[]; // sin filtro de rol, para calendario
 
 // ── AUTH HEADERS (se actualizan tras login) ───────────────────────────────────
 let AUTH_TOKEN=null;
@@ -876,7 +877,8 @@ async function supaFetch(path,opts={}){
 async function loadReservas(){
   try{
     const todas=await supaFetch('/rest/v1/reservas?select=*&order=entrada.desc');
-    reservas=filtrarPorRol(todas||[]);
+    todasReservas=todas||[]; // sin filtro, para calendario
+    reservas=filtrarPorRol(todasReservas);
     document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-ok"><i class="ti ti-circle-check"></i> Conectado — Sapema</div>';
     renderDashboard();
   }catch(e){document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-err"><i class="ti ti-alert-circle"></i> Sin conexión</div>';}
@@ -1974,6 +1976,8 @@ function renderDisponibilidad(){
 }
 
 function renderCalMes(prop, mes, anio, elId){
+  // Calendario usa TODAS las reservas (sin filtro de rol)
+  const reservas=todasReservas;
   const diasMes=new Date(anio,mes,0).getDate();
   const primerDia=new Date(anio,mes-1,1).getDay(); // 0=domingo
   const diasSem=['L','M','M','J','V','S','D'];
@@ -2052,6 +2056,7 @@ function renderCalMes(prop, mes, anio, elId){
 }
 
 function renderCalH4(mes, anio, elId){
+  const reservas=todasReservas; // sin filtro de rol
   // H4: show weeks where sem=2 (available for direct rental)
   // Use calendar logic to find sem 2 weeks
   const startIdx={2026:1,2027:2};
