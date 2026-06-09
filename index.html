@@ -1976,7 +1976,11 @@ function renderDisponibilidad(){
 function renderCalMes(prop, mes, anio, elId){
   const diasMes=new Date(anio,mes,0).getDate();
   const primerDia=new Date(anio,mes-1,1).getDay(); // 0=domingo
-  const diasSem=['D','L','M','M','J','V','S'];
+  const diasSem=['L','M','M','J','V','S','D'];
+
+  // Socios conocidos para detectar uso socio por bruto=0
+  const SOCIOS_NOMBRES=['SERGIO ARANGO','ALEJANDRO LONDOÑO','JUAN DAVID BRIDGE','SANTIAGO ARANGO','NICOLÁS VELÁSQUEZ'];
+  function esSocio(r){ return r.estado_pago==='no_paga'||(parseFloat(r.bruto||0)===0&&r.huesped&&SOCIOS_NOMBRES.some(s=>r.huesped.toUpperCase().includes(s.split(' ')[0]))); }
 
   // Get occupied days from reservas
   const ocupados={};
@@ -1991,7 +1995,7 @@ function renderCalMes(prop, mes, anio, elId){
       if(ds.startsWith(mesStr)){
         const dia=cur.getDate();
         ocupados[dia]={
-          tipo: r.estado_pago==='no_paga'?'socio':'ocupado',
+          tipo: esSocio(r)?'socio':'ocupado',
           huesped: r.huesped||'',
           entrada: r.entrada,
           salida: r.salida
@@ -2002,10 +2006,10 @@ function renderCalMes(prop, mes, anio, elId){
   });
 
   let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">';
-  // Header
+  // Header — semana empieza en Lunes
   diasSem.forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:600;color:var(--text-3);padding:4px 0;">${d}</div>`);
-  // Empty cells before first day
-  const offset=primerDia===0?6:primerDia-1; // Start on Monday
+  // Empty cells before first day (primerDia: 0=Dom,1=Lun,...,6=Sab → offset en grid lunes-inicio)
+  const offset=primerDia===0?6:primerDia-1;
   for(let i=0;i<offset;i++) html+=`<div></div>`;
   // Days
   for(let d=1;d<=diasMes;d++){
@@ -2032,7 +2036,7 @@ function renderCalMes(prop, mes, anio, elId){
   if(resDelMes.length){
     html+=`<div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:10px;">`;
     resDelMes.forEach(r=>{
-      const isNoPaga=r.estado_pago==='no_paga';
+      const isNoPaga=r.estado_pago==='no_paga'||(parseFloat(r.bruto||0)===0&&r.huesped&&['SERGIO','ALEJANDRO','JUAN DAVID','BRIDGE','SANTIAGO','NICOLÁS'].some(s=>r.huesped.toUpperCase().includes(s)));
       const color=isNoPaga?'var(--orange)':'var(--text)';
       html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:11px;">
         <span style="font-weight:500;color:${color}">${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</span>
