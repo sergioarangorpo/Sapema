@@ -195,12 +195,33 @@
     <div class="form-grid">
       <div class="form-group"><label>Comisión BOLD (COP)</label><input type="number" id="edit-bold"></div>
       <div class="form-group"><label>Estado</label>
-        <select id="edit-estado">
+        <select id="edit-estado" onchange="onEditEstadoChange()">
           <option value="pagado">✅ Pagado</option>
           <option value="pendiente">⏳ Pendiente</option>
-          <option value="abono">💰 Abono</option>
+          <option value="abono">💰 Abono parcial</option>
           <option value="no_paga">🚫 No paga</option>
         </select>
+      </div>
+    </div>
+    <!-- PANEL ABONO -->
+    <div id="edit-abono-panel" style="display:none;background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:14px;margin-top:4px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--blue);margin-bottom:10px;">💰 Detalle del abono</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Valor abonado (COP)</label>
+          <input type="number" id="edit-abono-valor" placeholder="0" oninput="calcDistribAbono()">
+        </div>
+      </div>
+      <div id="edit-abono-distrib" style="display:none;font-size:12px;margin-top:8px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);margin-bottom:6px;">Distribución del abono</div>
+        <div id="edit-abono-detalle" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #B8D4E8;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:12px;color:var(--text-2);">Saldo pendiente total</span>
+            <span id="edit-abono-saldo" style="font-weight:600;color:var(--orange);">—</span>
+          </div>
+          <div id="edit-abono-saldo-distrib" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:6px;font-size:11px;color:var(--text-3);"></div>
+        </div>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:20px;justify-content:space-between;">
@@ -1350,11 +1371,68 @@ async function confirmarPago(){
 }
 async function cambiarEstado(id, nuevoEstado){
   if(!nuevoEstado) return;
+  if(nuevoEstado==='abono'){
+    // Abrir modal de edición para capturar el valor del abono
+    const r=reservas.find(x=>x.id===id)||todasReservas.find(x=>x.id===id);
+    if(r){abrirEdicion(r.id);document.getElementById('edit-estado').value='abono';onEditEstadoChange();}
+    return;
+  }
   try {
     await supaFetch(`/rest/v1/reservas?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({estado_pago: nuevoEstado})});
     await loadReservas();
     renderHistorial();
   } catch(err) { alert('Error al cambiar estado: '+err.message); }
+}
+
+
+function onEditEstadoChange(){
+  const estado=document.getElementById('edit-estado').value;
+  const panel=document.getElementById('edit-abono-panel');
+  panel.style.display=estado==='abono'?'block':'none';
+  if(estado==='abono') calcDistribAbono();
+}
+
+function calcDistribAbono(){
+  const abono=parseFloat(document.getElementById('edit-abono-valor').value)||0;
+  const r=window._editandoReserva;
+  if(!r||abono===0){document.getElementById('edit-abono-distrib').style.display='none';return;}
+  document.getElementById('edit-abono-distrib').style.display='block';
+
+  // Calcular neto del abono proporcional al neto total
+  const neto=parseFloat(r.neto)||parseFloat(r.bruto)||0;
+  const ratio=neto>0?Math.min(abono/neto,1):0;
+
+  // Distribución según propiedad
+  const socios=getSociosDistrib(r, abono);
+  const saldo=Math.max(0,neto-abono);
+  const sociosSaldo=getSociosDistrib(r, saldo);
+
+  let detalleHtml='';
+  socios.forEach(s=>{detalleHtml+=`<div style="color:var(--text-2)">${s.n}</div><div style="font-weight:600;text-align:right">${fmt(s.v)}</div>`;});
+  document.getElementById('edit-abono-detalle').innerHTML=detalleHtml;
+  document.getElementById('edit-abono-saldo').textContent=fmt(saldo);
+
+  let saldoHtml='';
+  sociosSaldo.forEach(s=>{saldoHtml+=`<div>${s.n}</div><div style="text-align:right">${fmt(s.v)}</div>`;});
+  document.getElementById('edit-abono-saldo-distrib').innerHTML=saldoHtml;
+}
+
+function getSociosDistrib(r, monto){
+  const prop=r.prop;
+  const santi_h4=r.santi_h4;
+  const santi_m1=r.santi_m1;
+  if(prop==='GO') return [{n:'Sergio Arango',v:monto}];
+  if(prop==='L3') return [{n:'Sergio Arango',v:monto*0.5},{n:'Alejandro Londoño',v:monto*0.5}];
+  if(prop==='H4'){
+    if(santi_h4==='si') return [{n:'Juan David Bridge',v:monto*0.5},{n:'Sergio Arango',v:monto*0.25},{n:'Santiago Arango',v:monto*0.25}];
+    return [{n:'Juan David Bridge',v:monto*(2/3)},{n:'Sergio Arango',v:monto*(1/3)}];
+  }
+  if(prop==='M1'){
+    // Bolsa: distribución según santi_m1
+    if(santi_m1==='si') return [{n:'Juan David Bridge',v:monto*(2/3)},{n:'Sergio Arango',v:monto*(1/6)},{n:'Nicolás Velásquez',v:monto*(1/6)}];
+    return [{n:'Juan David Bridge',v:monto*(2/3)},{n:'Sergio Arango',v:monto*(1/3)}];
+  }
+  return [{n:'Sergio Arango',v:monto}];
 }
 
 function cerrarModal(){document.getElementById('modal-liq').classList.remove('open');liquidandoId=null;liquidandoReserva=null;}
@@ -1372,6 +1450,18 @@ function abrirEdicion(id){
   document.getElementById('edit-comision').value=r.comision||0;
   document.getElementById('edit-bold').value=r.comision_pasarela||0;
   document.getElementById('edit-estado').value=r.estado_pago||'pendiente';
+  window._editandoReserva=r;
+  // Mostrar panel abono si ya tiene abono
+  const panelA=document.getElementById('edit-abono-panel');
+  const inputA=document.getElementById('edit-abono-valor');
+  if(r.estado_pago==='abono'){
+    panelA.style.display='block';
+    inputA.value=r.abono||'';
+    calcDistribAbono();
+  } else {
+    panelA.style.display='none';
+    inputA.value='';
+  }
   document.getElementById('modal-edit').classList.add('open');
 }
 
@@ -1390,7 +1480,11 @@ async function guardarEdicion(){
   const btn=document.getElementById('btn-edit-guardar');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
-    await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'PATCH',body:JSON.stringify({entrada,salida,huesped,personas,bruto,comision,comision_pasarela:bold,neto,noches,estado_pago:estado})});
+    const abonoVal=estado==='abono'?(parseFloat(document.getElementById('edit-abono-valor').value)||0):null;
+    const saldoPend=abonoVal!==null?Math.max(0,neto-abonoVal):null;
+    const patchData={entrada,salida,huesped,personas,bruto,comision,comision_pasarela:bold,neto,noches,estado_pago:estado};
+    if(abonoVal!==null){patchData.abono=abonoVal;patchData.saldo_pendiente=saldoPend;}
+    await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'PATCH',body:JSON.stringify(patchData)});
     cerrarModalEdit();await loadReservas();renderHistorial();
   }catch(err){showMsg('edit-msg','Error: '+err.message,'danger');}
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar cambios';}
@@ -1548,7 +1642,13 @@ function renderDashboard(){
   // Pendientes banner
   const pend=reservas.filter(r=>r.estado_pago==='pendiente'||r.estado_pago==='abono');
   const banner=document.getElementById('pendientes-banner');
-  if(pend.length>0){banner.style.display='flex';document.getElementById('pendientes-txt').textContent=pend.length+' reserva(s) pendientes de pago — ve al Historial y liquídalas';}
+  if(pend.length>0){
+    const abonos=pend.filter(r=>r.estado_pago==='abono');
+    const totalSaldo=abonos.reduce((a,r)=>a+(parseFloat(r.saldo_pendiente)||0),0);
+    let txt=pend.length+' reserva(s) pendientes de pago';
+    if(abonos.length>0) txt+=' · '+abonos.length+' con abono (saldo: '+fmt(totalSaldo)+')';
+    banner.style.display='flex';document.getElementById('pendientes-txt').textContent=txt+' — ve al Historial';
+  }
   else banner.style.display='none';
 
   // Charts
@@ -1754,7 +1854,10 @@ function renderHistorial(){
         <td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td>
         <td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td>
-        <td>${estadoHtml2(r.estado_pago)}</td>
+        <td>
+          ${estadoHtml2(r.estado_pago)}
+          ${r.estado_pago==='abono'&&r.abono?`<div style="font-size:10px;margin-top:3px;color:var(--blue);">💰 ${fmt(r.abono)} · saldo ${fmt(r.saldo_pendiente||0)}</div>`:''}
+        </td>
         <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}</div></td>
       </tr>`;
     }).join('')+'</tbody></table></div>';
