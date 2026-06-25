@@ -1934,7 +1934,20 @@ function renderHistorial(){
 
   const estadoHtml2=e=>{const m={'pagado':'pagado','pendiente':'pendiente','abono':'abono','no_paga':'no paga'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;};
 
-  cont.innerHTML='<div class="table-wrap"><table><thead><tr>'+
+  cont.innerHTML='<div class="table-wrap"><table style="table-layout:fixed;width:100%;">'+
+    '<colgroup>'+
+    '<col style="width:90px">'+   /* Propiedad */
+    '<col style="width:160px">'+  /* Huésped */
+    '<col style="width:90px">'+   /* Entrada */
+    '<col style="width:55px">'+   /* Noches */
+    '<col style="width:75px">'+   /* Tipo */
+    '<col style="width:105px">'+  /* Bruto */
+    '<col style="width:105px">'+  /* Comisión */
+    '<col style="width:105px">'+  /* Neto */
+    '<col style="width:110px">'+  /* Estado */
+    '<col style="width:90px">'+   /* Acciones */
+    '</colgroup>'+
+    '<thead><tr>'+
     th('Propiedad','prop')+th('Huésped','huesped')+th('Entrada','entrada')+th('Noches','noches')+th('Tipo','tipo')+th('Bruto','bruto')+
     '<th>Comisión</th>'+th('Neto','neto')+th('Estado','estado_pago')+'<th>Acciones</th></tr></thead><tbody>'+
     lista.map(r=>{
@@ -1950,7 +1963,7 @@ function renderHistorial(){
       </select>`;
       return`<tr>
         <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:4px"></span>${PROPS[r.prop].nombre}</td>
-        <td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.huesped||''}"> ${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td>
         <td>${r.entrada||''}</td>
         <td>${r.noches||0}</td>
         <td>${r.tipo}</td>
