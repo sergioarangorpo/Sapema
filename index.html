@@ -1518,10 +1518,10 @@ function getSociosDistrib(r, monto, feeResort=0){
   if(prop==='M1'){
     // Semana Nico: el fee resort ya fue descontado, el resto es para Nico
     if(r.semana==='Nico') return [{n:'Nicolás Velásquez (neto)',v:monto}];
-    // Bolsa: JD, Sergio, Santi
+    // Bolsa: JD 50%, Sergio 25%, Santiago 25% (si aportó)
     const santi=santi_m1==='si';
-    const res=[{n:'Juan David Bridge',v:monto*(santi?2/3:0.5)},{n:'Sergio Arango',v:monto*(santi?1/6:0.5)}];
-    if(santi) res.push({n:'Santiago Arango',v:monto*(1/6)});
+    const res=[{n:'Juan David Bridge',v:monto*0.5},{n:'Sergio Arango',v:monto*(santi?0.25:0.5)}];
+    if(santi) res.push({n:'Santiago Arango',v:monto*0.25});
     return res;
   }
   return [{n:'Sergio Arango',v:monto}];
