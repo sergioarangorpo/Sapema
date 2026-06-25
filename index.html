@@ -212,6 +212,27 @@
           <input type="number" id="edit-abono-valor" placeholder="0" oninput="calcDistribAbono()">
         </div>
       </div>
+      <!-- Fee resort solo para M1 semana Nicolás -->
+      <div id="edit-abono-fee-resort-box" style="display:none;">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Fee resort (temporada)</label>
+            <select id="edit-abono-fee-tipo" onchange="onAbonoFeeTipoChange()">
+              <option value="80000">Temporada baja — $80.000/pers/noche</option>
+              <option value="100000">Temporada alta — $100.000/pers/noche</option>
+              <option value="otro">Otro valor...</option>
+            </select>
+          </div>
+          <div class="form-group" id="edit-abono-fee-custom-box" style="display:none;">
+            <label>Fee resort personalizado (COP/pers/noche)</label>
+            <input type="number" id="edit-abono-fee-custom" placeholder="0" oninput="calcDistribAbono()">
+          </div>
+          <div class="form-group">
+            <label>Fee resort total calculado</label>
+            <input type="text" id="edit-abono-fee-total" readonly style="background:var(--bg);color:var(--orange);font-weight:600;">
+          </div>
+        </div>
+      </div>
       <div id="edit-abono-distrib" style="display:none;font-size:12px;margin-top:8px;">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);margin-bottom:6px;">Distribución del abono</div>
         <div id="edit-abono-detalle" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;"></div>
@@ -1392,32 +1413,90 @@ function onEditEstadoChange(){
   if(estado==='abono') calcDistribAbono();
 }
 
+function getAbonoFeeResort(r){
+  // Fee resort para M1 semana Nico
+  if(r.prop!=='M1'||r.semana!=='Nico') return 0;
+  const tipoEl=document.getElementById('edit-abono-fee-tipo');
+  if(!tipoEl) return 0;
+  const tipo=tipoEl.value;
+  const noches=parseFloat(r.noches)||0;
+  const personas=parseFloat(r.personas)||1;
+  if(tipo==='otro'){
+    const custom=parseFloat(document.getElementById('edit-abono-fee-custom').value)||0;
+    return custom*personas*noches;
+  }
+  return parseInt(tipo)*personas*noches;
+}
+
+function onAbonoFeeTipoChange(){
+  const tipo=document.getElementById('edit-abono-fee-tipo').value;
+  document.getElementById('edit-abono-fee-custom-box').style.display=tipo==='otro'?'block':'none';
+  calcDistribAbono();
+}
+
+function getNetoRepartible(r){
+  const bruto=parseFloat(r.bruto)||0;
+  const comision=parseFloat(r.comision)||0;
+  const bold=parseFloat(r.comision_pasarela)||0;
+  const neto=bruto-comision-bold;
+  // Fee admin 10% aplica siempre (Sergio gestiona)
+  const feeAdmin=neto*0.1;
+  // Fee resort solo M1 Nico
+  const feeResort=getAbonoFeeResort(r);
+  const netoSocios=neto-feeAdmin-feeResort;
+  return {neto, feeAdmin, feeResort, netoSocios};
+}
+
 function calcDistribAbono(){
   const abono=parseFloat(document.getElementById('edit-abono-valor').value)||0;
   const r=window._editandoReserva;
   if(!r||abono===0){document.getElementById('edit-abono-distrib').style.display='none';return;}
+
+  // Mostrar/ocultar selector fee resort M1 Nico
+  const esNico=r.prop==='M1'&&r.semana==='Nico';
+  document.getElementById('edit-abono-fee-resort-box').style.display=esNico?'block':'none';
+
+  const {neto, feeAdmin, feeResort, netoSocios}=getNetoRepartible(r);
+
+  // Actualizar campo fee resort total
+  if(esNico){
+    const feeTotalEl=document.getElementById('edit-abono-fee-total');
+    if(feeTotalEl) feeTotalEl.value=fmt(feeResort);
+  }
+
   document.getElementById('edit-abono-distrib').style.display='block';
 
-  // Calcular neto del abono proporcional al neto total
-  const neto=parseFloat(r.neto)||parseFloat(r.bruto)||0;
+  // Distribución proporcional al ratio abono/neto
   const ratio=neto>0?Math.min(abono/neto,1):0;
+  const feeAdminAbono=feeAdmin*ratio;
+  const feeResortAbono=feeResort*ratio;
+  const abonoSocios=abono-feeAdminAbono-feeResortAbono;
 
-  // Distribución según propiedad
-  const socios=getSociosDistrib(r, abono);
-  const saldo=Math.max(0,neto-abono);
-  const sociosSaldo=getSociosDistrib(r, saldo);
+  const saldoTotal=Math.max(0,neto-abono);
+  const feeAdminSaldo=feeAdmin*(1-ratio);
+  const feeResortSaldo=feeResort*(1-ratio);
+  const saldoSocios=Math.max(0,netoSocios-abonoSocios);
 
+  const socios=getSociosDistrib(r, Math.max(0,abonoSocios), feeResortAbono);
+  const sociosSaldo=getSociosDistrib(r, Math.max(0,saldoSocios), feeResortSaldo);
+
+  // Render detalle abono
   let detalleHtml='';
+  detalleHtml+=`<div style="color:var(--text-3);font-size:11px">Fee admin Sergio (10%)</div><div style="font-weight:500;text-align:right;font-size:11px;color:var(--green)">${fmt(feeAdminAbono)}</div>`;
+  if(feeResortAbono>0) detalleHtml+=`<div style="color:var(--text-3);font-size:11px">Fee resort (Nicolás)</div><div style="font-weight:500;text-align:right;font-size:11px;color:var(--orange)">${fmt(feeResortAbono)}</div>`;
   socios.forEach(s=>{detalleHtml+=`<div style="color:var(--text-2)">${s.n}</div><div style="font-weight:600;text-align:right">${fmt(s.v)}</div>`;});
   document.getElementById('edit-abono-detalle').innerHTML=detalleHtml;
-  document.getElementById('edit-abono-saldo').textContent=fmt(saldo);
+  document.getElementById('edit-abono-saldo').textContent=fmt(saldoTotal);
 
+  // Render saldo pendiente
   let saldoHtml='';
+  saldoHtml+=`<div>Fee admin Sergio</div><div style="text-align:right">${fmt(feeAdminSaldo)}</div>`;
+  if(feeResortSaldo>0) saldoHtml+=`<div>Fee resort (Nicolás)</div><div style="text-align:right">${fmt(feeResortSaldo)}</div>`;
   sociosSaldo.forEach(s=>{saldoHtml+=`<div>${s.n}</div><div style="text-align:right">${fmt(s.v)}</div>`;});
   document.getElementById('edit-abono-saldo-distrib').innerHTML=saldoHtml;
 }
 
-function getSociosDistrib(r, monto){
+function getSociosDistrib(r, monto, feeResort=0){
   const prop=r.prop;
   const santi_h4=r.santi_h4;
   const santi_m1=r.santi_m1;
@@ -1428,11 +1507,20 @@ function getSociosDistrib(r, monto){
     return [{n:'Juan David Bridge',v:monto*(2/3)},{n:'Sergio Arango',v:monto*(1/3)}];
   }
   if(prop==='M1'){
-    // Bolsa: distribución según santi_m1
-    if(santi_m1==='si') return [{n:'Juan David Bridge',v:monto*(2/3)},{n:'Sergio Arango',v:monto*(1/6)},{n:'Nicolás Velásquez',v:monto*(1/6)}];
-    return [{n:'Juan David Bridge',v:monto*(2/3)},{n:'Sergio Arango',v:monto*(1/3)}];
+    // Semana Nico: el fee resort ya fue descontado, el resto es para Nico
+    if(r.semana==='Nico') return [{n:'Nicolás Velásquez (neto)',v:monto}];
+    // Bolsa: JD, Sergio, Santi
+    const santi=santi_m1==='si';
+    const res=[{n:'Juan David Bridge',v:monto*(santi?2/3:0.5)},{n:'Sergio Arango',v:monto*(santi?1/6:0.5)}];
+    if(santi) res.push({n:'Santiago Arango',v:monto*(1/6)});
+    return res;
   }
   return [{n:'Sergio Arango',v:monto}];
+}
+
+function toggleAbonoDetalle(id){
+  const row=document.getElementById('abono-row-'+id);
+  if(row) row.style.display=row.style.display==='none'?'table-row':'none';
 }
 
 function cerrarModal(){document.getElementById('modal-liq').classList.remove('open');liquidandoId=null;liquidandoReserva=null;}
@@ -1457,10 +1545,14 @@ function abrirEdicion(id){
   if(r.estado_pago==='abono'){
     panelA.style.display='block';
     inputA.value=r.abono||'';
+    // Mostrar fee resort si es M1 Nico
+    const esNicoOpen=r.prop==='M1'&&r.semana==='Nico';
+    document.getElementById('edit-abono-fee-resort-box').style.display=esNicoOpen?'block':'none';
     calcDistribAbono();
   } else {
     panelA.style.display='none';
     inputA.value='';
+    document.getElementById('edit-abono-fee-resort-box').style.display='none';
   }
   document.getElementById('modal-edit').classList.add('open');
 }
@@ -1856,10 +1948,12 @@ function renderHistorial(){
         <td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td>
         <td>
           ${estadoHtml2(r.estado_pago)}
-          ${r.estado_pago==='abono'&&r.abono?`<div style="font-size:10px;margin-top:3px;color:var(--blue);">💰 ${fmt(r.abono)} · saldo ${fmt(r.saldo_pendiente||0)}</div>`:''}
+          ${r.estado_pago==='abono'&&r.abono?`<button onclick="toggleAbonoDetalle('${r.id}')" style="display:block;margin-top:4px;font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;">💰 ${fmt(r.abono)} · ver detalle</button>`:''}
         </td>
         <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}</div></td>
-      </tr>`;
+      </tr>
+      ${r.estado_pago==='abono'&&r.abono?`<tr id="abono-row-${r.id}" style="display:none;"><td colspan="10" style="padding:0;border-top:none;"><div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);margin:0 8px 8px;padding:10px 14px;font-size:12px;"><span style="color:var(--text-3)">💰 Abonado: </span><strong>${fmt(r.abono)}</strong><span style="color:var(--text-3);margin-left:16px;">⏳ Saldo pendiente: </span><strong style="color:var(--orange)">${fmt(r.saldo_pendiente||0)}</strong></div></td></tr>`:''}
+      `;
     }).join('')+'</tbody></table></div>';
 }
 
