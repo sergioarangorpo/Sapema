@@ -211,6 +211,10 @@
           <label>Valor abonado (COP)</label>
           <input type="number" id="edit-abono-valor" placeholder="0" oninput="calcDistribAbono()">
         </div>
+        <div class="form-group">
+          <label>Comisión BOLD sobre abono (COP) <span style="color:var(--text-3);font-weight:400">— si pagó con TC</span></label>
+          <input type="number" id="edit-abono-bold" placeholder="0" oninput="calcDistribAbono()">
+        </div>
       </div>
       <!-- Fee resort solo para M1 semana Nicolás -->
       <div id="edit-abono-fee-resort-box" style="display:none;">
@@ -1457,6 +1461,8 @@ function calcDistribAbono(){
   document.getElementById('edit-abono-fee-resort-box').style.display=esNico?'block':'none';
 
   const {neto, feeAdmin, feeResort, netoSocios}=getNetoRepartible(r);
+  const boldAbono=parseFloat(document.getElementById('edit-abono-bold').value)||0;
+  const abonoNeto=Math.max(0,abono-boldAbono); // lo que realmente llega después de BOLD
 
   // Actualizar campo fee resort total
   if(esNico){
@@ -1466,11 +1472,11 @@ function calcDistribAbono(){
 
   document.getElementById('edit-abono-distrib').style.display='block';
 
-  // Distribución proporcional al ratio abono/neto
-  const ratio=neto>0?Math.min(abono/neto,1):0;
+  // Distribución proporcional usando abonoNeto
+  const ratio=neto>0?Math.min(abonoNeto/neto,1):0;
   const feeAdminAbono=feeAdmin*ratio;
   const feeResortAbono=feeResort*ratio;
-  const abonoSocios=abono-feeAdminAbono-feeResortAbono;
+  const abonoSocios=abonoNeto-feeAdminAbono-feeResortAbono;
 
   const saldoTotal=Math.max(0,neto-abono);
   const feeAdminSaldo=feeAdmin*(1-ratio);
@@ -1482,6 +1488,8 @@ function calcDistribAbono(){
 
   // Render detalle abono
   let detalleHtml='';
+  if(boldAbono>0) detalleHtml+=`<div style="color:var(--text-3);font-size:11px">Comisión BOLD</div><div style="font-weight:500;text-align:right;font-size:11px;color:var(--red)">-${fmt(boldAbono)}</div>`;
+  detalleHtml+=`<div style="color:var(--text-3);font-size:11px">Neto recibido</div><div style="font-weight:500;text-align:right;font-size:11px;">${fmt(abonoNeto)}</div>`;
   detalleHtml+=`<div style="color:var(--text-3);font-size:11px">Fee admin Sergio (10%)</div><div style="font-weight:500;text-align:right;font-size:11px;color:var(--green)">${fmt(feeAdminAbono)}</div>`;
   if(feeResortAbono>0) detalleHtml+=`<div style="color:var(--text-3);font-size:11px">Fee resort (Nicolás)</div><div style="font-weight:500;text-align:right;font-size:11px;color:var(--orange)">${fmt(feeResortAbono)}</div>`;
   socios.forEach(s=>{detalleHtml+=`<div style="color:var(--text-2)">${s.n}</div><div style="font-weight:600;text-align:right">${fmt(s.v)}</div>`;});
@@ -1545,6 +1553,7 @@ function abrirEdicion(id){
   if(r.estado_pago==='abono'){
     panelA.style.display='block';
     inputA.value=r.abono||'';
+    document.getElementById('edit-abono-bold').value=r.abono_bold||'';
     // Mostrar fee resort si es M1 Nico
     const esNicoOpen=r.prop==='M1'&&r.semana==='Nico';
     document.getElementById('edit-abono-fee-resort-box').style.display=esNicoOpen?'block':'none';
@@ -1552,6 +1561,7 @@ function abrirEdicion(id){
   } else {
     panelA.style.display='none';
     inputA.value='';
+    document.getElementById('edit-abono-bold').value='';
     document.getElementById('edit-abono-fee-resort-box').style.display='none';
   }
   document.getElementById('modal-edit').classList.add('open');
@@ -1573,9 +1583,10 @@ async function guardarEdicion(){
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
   try{
     const abonoVal=estado==='abono'?(parseFloat(document.getElementById('edit-abono-valor').value)||0):null;
+    const abonoBoldVal=estado==='abono'?(parseFloat(document.getElementById('edit-abono-bold').value)||0):null;
     const saldoPend=abonoVal!==null?Math.max(0,neto-abonoVal):null;
     const patchData={entrada,salida,huesped,personas,bruto,comision,comision_pasarela:bold,neto,noches,estado_pago:estado};
-    if(abonoVal!==null){patchData.abono=abonoVal;patchData.saldo_pendiente=saldoPend;}
+    if(abonoVal!==null){patchData.abono=abonoVal;patchData.abono_bold=abonoBoldVal;patchData.saldo_pendiente=saldoPend;}
     await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'PATCH',body:JSON.stringify(patchData)});
     cerrarModalEdit();await loadReservas();renderHistorial();
   }catch(err){showMsg('edit-msg','Error: '+err.message,'danger');}
@@ -1946,8 +1957,13 @@ function renderHistorial(){
         <td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td>
         <td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td>
-        <td>${estadoHtml2(r.estado_pago)}</td>
-        <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}${r.estado_pago==='abono'&&r.abono?`<button onclick="toggleAbonoDetalle('${r.id}')" title="Ver detalle abono" style="padding:5px 7px;border-radius:var(--radius-sm);border:1px solid #B8D4E8;background:var(--blue-bg);color:var(--blue);cursor:pointer;font-size:12px;line-height:1;">💰</button>`:''}</div></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
+            ${estadoHtml2(r.estado_pago)}
+            ${r.estado_pago==='abono'&&r.abono?`<button onclick="toggleAbonoDetalle('${r.id}')" title="Ver detalle abono" style="padding:3px 6px;border-radius:var(--radius-sm);border:1px solid #B8D4E8;background:var(--blue-bg);color:var(--blue);cursor:pointer;font-size:11px;line-height:1;white-space:nowrap;">💰 ver</button>`:''}
+          </div>
+        </td>
+        <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}</div></td>
       </tr>`+
       (r.estado_pago==='abono'&&r.abono?`<tr id="abono-row-${r.id}" style="display:none;"><td colspan="10" style="padding:0;border-top:none;"><div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);margin:0 8px 8px;padding:10px 14px;font-size:12px;"><span style="color:var(--text-3)">💰 Abonado: </span><strong>${fmt(r.abono)}</strong><span style="color:var(--text-3);margin-left:16px;">⏳ Saldo pendiente: </span><strong style="color:var(--orange)">${fmt(r.saldo_pendiente||0)}</strong></div></td></tr>`:'');
     }).join('')+'</tbody></table></div>';
