@@ -91,10 +91,11 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--bg); }
     .estado { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
-    .estado-pagado { background: var(--green-bg); color: var(--green); }
-    .estado-pendiente { background: var(--orange-bg); color: var(--orange); }
-    .estado-abono { background: var(--blue-bg); color: var(--blue); }
-    .estado-no_paga { background: var(--border-light); color: var(--text-3); }
+    .estado { font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap; }
+    .estado-pagado { background:#D5F5E3;color:#1E8449; }
+    .estado-pendiente { background:var(--orange-bg);color:var(--orange); }
+    .estado-abono { background:#D6EAF8;color:#1A5276; }
+    .estado-no_paga { background:#FDEBD0;color:#CA6F1E; }
     .socio-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; font-family: 'DM Mono', monospace; }
     .socio-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
     .socio-row:last-child { border-bottom: none; }
@@ -1905,7 +1906,7 @@ function renderChartProp(byProp){
   }).join('');
 }
 
-function estadoHtml(e){const m={'pagado':'pagado','pendiente':'pendiente','abono':'abono','no_paga':'no paga'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;}
+function estadoHtml(e){const m={'pagado':'PAGADO','pendiente':'PENDIENTE','abono':'ABONO','no_paga':'NO PAGA'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;}
 
 let sortCol=null, sortDir=1;
 function sortHistorial(col){
@@ -1932,20 +1933,20 @@ function renderHistorial(){
 
   const th=(label,col)=>`<th style="cursor:pointer;user-select:none" onclick="sortHistorial('${col}')">${label} ${sortCol===col?(sortDir===1?'↑':'↓'):'↕'}</th>`;
 
-  const estadoHtml2=e=>{const m={'pagado':'pagado','pendiente':'pendiente','abono':'abono','no_paga':'no paga'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;};
+  const estadoHtml2=e=>{const m={'pagado':'PAGADO','pendiente':'PENDIENTE','abono':'ABONO','no_paga':'NO PAGA'};return`<span class="estado estado-${e||'pagado'}">${m[e]||e}</span>`;};
 
   cont.innerHTML='<div class="table-wrap"><table style="table-layout:fixed;width:100%;">'+
     '<colgroup>'+
     '<col style="width:90px">'+   /* Propiedad */
-    '<col style="width:160px">'+  /* Huésped */
+    '<col style="width:170px">'+  /* Huésped */
     '<col style="width:90px">'+   /* Entrada */
     '<col style="width:55px">'+   /* Noches */
-    '<col style="width:75px">'+   /* Tipo */
-    '<col style="width:105px">'+  /* Bruto */
-    '<col style="width:105px">'+  /* Comisión */
-    '<col style="width:105px">'+  /* Neto */
-    '<col style="width:110px">'+  /* Estado */
-    '<col style="width:90px">'+   /* Acciones */
+    '<col style="width:70px">'+   /* Tipo */
+    '<col style="width:110px">'+  /* Bruto */
+    '<col style="width:110px">'+  /* Comisión */
+    '<col style="width:110px">'+  /* Neto */
+    '<col style="width:120px">'+  /* Estado */
+    '<col style="width:65px">'+   /* Acciones */
     '</colgroup>'+
     '<thead><tr>'+
     th('Propiedad','prop')+th('Huésped','huesped')+th('Entrada','entrada')+th('Noches','noches')+th('Tipo','tipo')+th('Bruto','bruto')+
@@ -1954,13 +1955,7 @@ function renderHistorial(){
       const comision=(r.comision||0)+(r.comision_pasarela||0);
       const liquidar=(r.estado_pago==='pendiente'||r.estado_pago==='abono')?`<button class="btn btn-success btn-sm" onclick="abrirLiquidacion('${r.id}')" title="Liquidar"><i class="ti ti-coin"></i></button>`:'';
       const editar=`<button class="btn btn-secondary btn-sm" onclick="abrirEdicion('${r.id}')" title="Editar"><i class="ti ti-pencil"></i></button>`;
-      const cambiarEstado=`<select onchange="cambiarEstado('${r.id}',this.value)" style="font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);cursor:pointer;max-width:110px;">
-        <option value="">↕ Estado</option>
-        <option value="pagado" ${r.estado_pago==='pagado'?'selected':''}>✅ Pagado</option>
-        <option value="pendiente" ${r.estado_pago==='pendiente'?'selected':''}>⏳ Pendiente</option>
-        <option value="abono" ${r.estado_pago==='abono'?'selected':''}>💰 Abono</option>
-        <option value="no_paga" ${r.estado_pago==='no_paga'?'selected':''}>🚫 No paga</option>
-      </select>`;
+      // dropdown de estado eliminado — se cambia desde el modal de edición
       return`<tr>
         <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PROPS[r.prop].color};margin-right:4px"></span>${PROPS[r.prop].nombre}</td>
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.huesped||''}"> ${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td>
@@ -1976,7 +1971,7 @@ function renderHistorial(){
             ${r.estado_pago==='abono'&&r.abono?`<button onclick="toggleAbonoDetalle('${r.id}')" title="Ver detalle abono" style="padding:3px 6px;border-radius:var(--radius-sm);border:1px solid #B8D4E8;background:var(--blue-bg);color:var(--blue);cursor:pointer;font-size:11px;line-height:1;white-space:nowrap;">💰 ver</button>`:''}
           </div>
         </td>
-        <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}</div></td>
+        <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}</div></td>
       </tr>`+
       (r.estado_pago==='abono'&&r.abono?`<tr id="abono-row-${r.id}" style="display:none;"><td colspan="10" style="padding:0;border-top:none;"><div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);margin:0 8px 8px;padding:10px 14px;font-size:12px;"><span style="color:var(--text-3)">💰 Abonado: </span><strong>${fmt(r.abono)}</strong><span style="color:var(--text-3);margin-left:16px;">⏳ Saldo pendiente: </span><strong style="color:var(--orange)">${fmt(r.saldo_pendiente||0)}</strong></div></td></tr>`:'');
     }).join('')+'</tbody></table></div>';
