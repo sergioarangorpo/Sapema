@@ -1946,11 +1946,8 @@ function renderHistorial(){
         <td style="font-family:'DM Mono',monospace">${fmt(r.bruto)}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--red)">${comision>0?'-'+fmt(comision):'—'}</td>
         <td style="font-family:'DM Mono',monospace">${fmt(r.neto)}</td>
-        <td>
-          ${estadoHtml2(r.estado_pago)}
-          ${r.estado_pago==='abono'&&r.abono?`<button onclick="toggleAbonoDetalle('${r.id}')" style="display:block;margin-top:4px;font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;">💰 ${fmt(r.abono)} · ver detalle</button>`:''}
-        </td>
-        <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}</div></td>
+        <td>${estadoHtml2(r.estado_pago)}</td>
+        <td style="white-space:nowrap"><div style="display:flex;gap:3px;align-items:center">${editar}${liquidar}${cambiarEstado}${r.estado_pago==='abono'&&r.abono?`<button onclick="toggleAbonoDetalle('${r.id}')" title="Ver detalle abono" style="padding:5px 7px;border-radius:var(--radius-sm);border:1px solid #B8D4E8;background:var(--blue-bg);color:var(--blue);cursor:pointer;font-size:12px;line-height:1;">💰</button>`:''}</div></td>
       </tr>`+
       (r.estado_pago==='abono'&&r.abono?`<tr id="abono-row-${r.id}" style="display:none;"><td colspan="10" style="padding:0;border-top:none;"><div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);margin:0 8px 8px;padding:10px 14px;font-size:12px;"><span style="color:var(--text-3)">💰 Abonado: </span><strong>${fmt(r.abono)}</strong><span style="color:var(--text-3);margin-left:16px;">⏳ Saldo pendiente: </span><strong style="color:var(--orange)">${fmt(r.saldo_pendiente||0)}</strong></div></td></tr>`:'');
     }).join('')+'</tbody></table></div>';
