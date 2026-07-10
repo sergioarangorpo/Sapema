@@ -742,6 +742,35 @@
         <button class="btn btn-blue" onclick="descargarReporte()"><i class="ti ti-download"></i> Descargar PDF</button>
       </div>
     </div>
+    <!-- REPORTE COMISIONES POR MES -->
+    <div class="card">
+      <div class="card-title"><i class="ti ti-percentage"></i> Reporte de comisiones por mes</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Año</label>
+          <select id="com-anio">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Propiedad</label>
+          <select id="com-prop">
+            <option value="">Todas</option>
+            <option value="GO">GO Living</option>
+            <option value="M1">Villa M1</option>
+            <option value="L3">Villa L3</option>
+            <option value="H4">Villa H4</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="generarRepComisiones()" style="margin-top:4px;"><i class="ti ti-eye"></i> Ver reporte</button>
+      <div id="rep-comisiones-contenido" style="display:none;margin-top:16px;">
+        <div class="sep"></div>
+        <div id="rep-comisiones-tabla"></div>
+      </div>
+    </div>
+
     <div id="reporte-contenido" style="display:none">
       <div class="reporte-header" id="rep-header"></div>
       <div class="reporte-resumen" id="rep-resumen"></div>
@@ -1444,8 +1473,8 @@ function getNetoRepartible(r){
   const comision=parseFloat(r.comision)||0;
   const bold=parseFloat(r.comision_pasarela)||0;
   const neto=bruto-comision-bold;
-  // Fee admin 10% aplica siempre (Sergio gestiona)
-  const feeAdmin=neto*0.1;
+  // Fee admin 10% sobre BRUTO (Sergio gestiona)
+  const feeAdmin=bruto*0.1;
   // Fee resort solo M1 Nico
   const feeResort=getAbonoFeeResort(r);
   const netoSocios=neto-feeAdmin-feeResort;
@@ -2122,6 +2151,72 @@ function getReservasSocio(socio,desde,hasta){
     const val=getSocioValor(r,socio);
     return val!==0;
   });
+}
+
+
+function generarRepComisiones(){
+  const anio=parseInt(document.getElementById('com-anio').value);
+  const propFilt=document.getElementById('com-prop').value;
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Filtrar reservas del año y propiedad
+  let lista=todasReservas.filter(r=>{
+    if(!r.entrada) return false;
+    if(new Date(r.entrada).getFullYear()!==anio) return false;
+    if(propFilt&&r.prop!==propFilt) return false;
+    return true;
+  });
+
+  // Agrupar por mes
+  const porMes=Array.from({length:12},()=>({booking:0,bold:0,total:0,reservas:0}));
+  lista.forEach(r=>{
+    const mes=new Date(r.entrada).getMonth();
+    const comBooking=parseFloat(r.comision)||0;
+    const comBold=(parseFloat(r.comision_pasarela)||0)+(parseFloat(r.abono_bold)||0);
+    porMes[mes].booking+=comBooking;
+    porMes[mes].bold+=comBold;
+    porMes[mes].total+=comBooking+comBold;
+    if(comBooking+comBold>0) porMes[mes].reservas++;
+  });
+
+  const totalAnio=porMes.reduce((a,m)=>a+m.total,0);
+  const totalBooking=porMes.reduce((a,m)=>a+m.booking,0);
+  const totalBold=porMes.reduce((a,m)=>a+m.bold,0);
+
+  let html=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+    <div class="reporte-metric"><div class="reporte-metric-val" style="color:var(--red)">${fmt(totalAnio)}</div><div class="reporte-metric-label">Total comisiones ${anio}</div></div>
+    <div class="reporte-metric"><div class="reporte-metric-val" style="color:var(--orange)">${fmt(totalBooking)}</div><div class="reporte-metric-label">Booking</div></div>
+    <div class="reporte-metric"><div class="reporte-metric-val" style="color:var(--blue)">${fmt(totalBold)}</div><div class="reporte-metric-label">BOLD / TC</div></div>
+  </div>`;
+
+  html+=`<div class="table-wrap"><table style="table-layout:fixed;width:100%">
+    <colgroup><col style="width:80px"><col style="width:120px"><col style="width:120px"><col style="width:130px"><col style="width:70px"></colgroup>
+    <thead><tr>
+      <th>Mes</th><th style="text-align:right">Booking</th><th style="text-align:right">BOLD / TC</th><th style="text-align:right;color:var(--red)">Total</th><th style="text-align:right">Reservas</th>
+    </tr></thead><tbody>`;
+
+  porMes.forEach((m,i)=>{
+    const rowStyle=m.total>0?'':'color:var(--text-3)';
+    html+=`<tr style="${rowStyle}">
+      <td style="font-weight:500">${meses[i]} ${anio}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace">${m.booking>0?fmt(m.booking):'—'}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace">${m.bold>0?fmt(m.bold):'—'}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${m.total>0?'var(--red)':'var(--text-3)'}">${m.total>0?fmt(m.total):'—'}</td>
+      <td style="text-align:right">${m.reservas||'—'}</td>
+    </tr>`;
+  });
+
+  html+=`<tr style="font-weight:700;border-top:2px solid var(--border);">
+    <td>TOTAL ${anio}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--orange)">${fmt(totalBooking)}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--blue)">${fmt(totalBold)}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--red)">${fmt(totalAnio)}</td>
+    <td style="text-align:right">${lista.filter(r=>(parseFloat(r.comision)||0)+(parseFloat(r.comision_pasarela)||0)>0).length}</td>
+  </tr>`;
+  html+='</tbody></table></div>';
+
+  document.getElementById('rep-comisiones-tabla').innerHTML=html;
+  document.getElementById('rep-comisiones-contenido').style.display='block';
 }
 
 function generarReporte(){
