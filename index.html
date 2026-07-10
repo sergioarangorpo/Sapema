@@ -1255,6 +1255,17 @@ function calcDistrib(){
       btnNormal.style.display='inline-flex';
       document.getElementById('x-m1-normal').style.display='flex';
       document.getElementById('x-comision-auto').style.display='block';
+      // ── Auto-detectar semana propietario por fecha de entrada ──
+      const entradaVal=document.getElementById('r-entrada').value;
+      if(entradaVal){
+        const owner=getWeekOwner(entradaVal);
+        const selSem=document.getElementById('r-semana');
+        const newVal=owner==='Nico'?'Nico':'bolsa';
+        if(selSem.value!==newVal){
+          selSem.value=newVal;
+          onSemanaChange();
+        }
+      }
     }
   }
 
@@ -1280,14 +1291,14 @@ function getDistrib(r){
   let items=[];
   if(r.prop==='GO'){items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Aseo',v:-(r.aseo||0),t:'costo'},{n:'Sergio Arango (100%)',v:neto-(r.aseo||0),t:'ingreso'}];}
   else if(r.prop==='M1'){
-    const admon=neto*0.1,resto=neto-admon;
+    const admon=(r.bruto||0)*0.1,resto=neto-admon;
     if(r.semana==='Nico'){const fr=r.fee_resort_historico||0;items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort (absorbe Nicolás)',v:-fr,t:'costo'},{n:'Nicolás Velásquez',v:resto-fr,t:'ingreso'}];}
     else{const santi=r.santi_m1==='si';items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango ('+(santi?'25':'50')+'%)',v:resto*(santi?0.25:0.5),t:'ingreso'}];if(santi)items.push({n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'});}
   }else if(r.prop==='L3'){
     if(r.tipo==='Directo'){const fee=neto*0.1,resto=neto-fee,gn=r.gestor==='sergio'?'Sergio Arango':r.gestor==='alejandro'?'Alejandro Londoño':'Tercero';items=[{n:'Fee comercial → '+gn,v:fee,t:'admon'},{n:'Sergio Arango (50%)',v:resto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:resto*0.5,t:'ingreso'}];}
     else{items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Sergio Arango (50%)',v:neto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:neto*0.5,t:'ingreso'}];}
   }else if(r.prop==='H4'){
-    if((r.h4_modo||'hotel')==='retiro'){const admon=neto*0.1,fr=r.fee_resort_historico||0,resto=neto-admon-fr;items=[{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort hotel',v:-fr,t:'costo'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:resto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'}];}
+    if((r.h4_modo||'hotel')==='retiro'){const admon=(r.bruto||0)*0.1,fr=r.fee_resort_historico||0,resto=neto-admon-fr;items=[{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort hotel',v:-fr,t:'costo'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:resto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'}];}
     else{const santi=r.santi_h4!=='no';items=santi?[{n:'Juan David Bridge (50%)',v:neto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:neto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:neto*0.25,t:'ingreso'}]:[{n:'Juan David Bridge (66.7%)',v:neto*0.667,t:'ingreso'},{n:'Sergio Arango (33.3%)',v:neto*0.333,t:'ingreso'}];}
   }
   return items;
