@@ -1314,7 +1314,14 @@ function getSocioValor(r,socio){
     if(socio==='Santiago Arango') return r.pago_sar||0;
     if(socio==='Nicolás Velásquez'&&r.prop==='M1'&&r.semana==='Nico')
       return (r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
-    if(socio==='Alejandro Londoño'&&r.prop==='L3') return r.pago_jdbj||0;
+    if(socio==='Alejandro Londoño'&&r.prop==='L3'){
+      // pago_jdbj se usa para el segundo socio en L3 (Alejandro)
+      // Si no hay valor guardado, calcular desde getDistrib
+      if(r.pago_jdbj>0) return r.pago_jdbj;
+      const items=getDistrib(r);
+      const match=items.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes('alejandro'));
+      return match.reduce((s,d)=>s+d.v,0);
+    }
     return 0;
   }
   // Calculate from distribution logic
@@ -2154,13 +2161,25 @@ function initReporte(){
 }
 
 function getReservasSocio(socio,desde,hasta){
+  // Mapeo socio → propiedades donde participa
+  const propsSocio={
+    'Sergio Arango':['GO','M1','L3','H4'],
+    'Juan David Bridge':['M1','H4'],
+    'Santiago Arango':['M1','H4'],
+    'Alejandro Londoño':['L3'],
+    'Nicolás Velásquez':['M1'],
+  };
+  const props=propsSocio[socio]||[];
   return reservas.filter(r=>{
     if(!r.entrada)return false;
     if(desde&&r.entrada<desde)return false;
     if(hasta&&r.entrada>hasta)return false;
     if(r.estado_pago==='no_paga')return false;
-    const val=getSocioValor(r,socio);
-    return val!==0;
+    // Nico solo semana Nico
+    if(socio==='Nicolás Velásquez'&&r.semana!=='Nico')return false;
+    // JD Bridge no aplica en L3 como socio (L3 es Sergio+Alejandro)
+    if(socio==='Juan David Bridge'&&r.prop==='L3')return false;
+    return props.includes(r.prop);
   });
 }
 
