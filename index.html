@@ -1327,8 +1327,8 @@ async function guardarReserva(){
   const p=document.getElementById('r-prop').value,t=document.getElementById('r-tipo').value;
   const h=document.getElementById('r-huesped').value,e=document.getElementById('r-entrada').value,s=document.getElementById('r-salida').value;
   const bruto=parseFloat(document.getElementById('r-bruto').value)||0;
-  const esUsoSocio=document.getElementById('r-uso-socio').checked&&!esBolsaH4_v;
   const esBolsaH4_v=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
+  const esUsoSocio=document.getElementById('r-uso-socio').checked&&!esBolsaH4_v;
   if(!esBolsaH4_v&&(!p||!t||!e||!s)){showMsg('r-msg','Completa propiedad, plataforma y fechas.','info');return;}
   if(esBolsaH4_v&&!p){showMsg('r-msg','Selecciona la propiedad.','info');return;}
   // Si es bolsa H4, no aplica esUsoSocio
