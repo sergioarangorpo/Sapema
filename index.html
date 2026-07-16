@@ -484,11 +484,16 @@
               <option value="Nico">Semana 3 — Nicolás Velásquez</option>
             </select>
           </div>
-          <div class="form-group" id="x-santi-m1-wrap"><label>¿Santiago aportó H4 este mes?</label>
-            <select id="r-santi-m1" onchange="calcDistrib()">
-              <option value="si">Sí — participa en bolsa</option>
+          <div class="form-group" id="x-santi-m1-wrap"><label>¿Santiago aportó M1 este mes?</label>
+            <select id="r-santi-m1" onchange="onSantiM1Change()">
+              <option value="si">Sí — completo (25%)</option>
+              <option value="parcial">Parcial — ingresa días</option>
               <option value="no">No — solo JD y Sergio</option>
             </select>
+          </div>
+          <div class="form-group" id="x-santi-dias" style="display:none">
+            <label>Días que aportó Santiago</label>
+            <input type="number" id="r-santi-dias" min="1" max="6" value="1" oninput="calcDistrib()" placeholder="1–6">
           </div>
         </div>
         <!-- RESERVA CRUZADA - aparece automáticamente al detectar cruce de semanas -->
@@ -1030,6 +1035,24 @@ function calcDistribH4(){
   document.getElementById('r-bruto').value=total;
 }
 
+
+function onSantiM1Change(){
+  const val=document.getElementById('r-santi-m1').value;
+  document.getElementById('x-santi-dias').style.display=val==='parcial'?'flex':'none';
+  calcDistrib();
+}
+
+// Helper: obtener proporciones Santiago M1 según selector
+function getSantiProps(){
+  const val=document.getElementById('r-santi-m1').value;
+  if(val==='no') return {jd:0.5,ser:0.5,san:0,label:'no'};
+  if(val==='si') return {jd:0.5,ser:0.25,san:0.25,label:'si'};
+  // Parcial: JD=14, Sergio=7, Santiago=dias
+  const dias=parseInt(document.getElementById('r-santi-dias').value)||1;
+  const total=14+7+dias;
+  return {jd:14/total,ser:7/total,san:dias/total,label:'parcial',dias};
+}
+
 function onPropChange(){
   const p=document.getElementById('r-prop').value;
   const sel=document.getElementById('r-tipo');
@@ -1121,7 +1144,8 @@ function calcCruzada(){
   const nicoValor=parseFloat(document.getElementById('cr-nico-valor').value)||0;
   const bolsaNoches=parseInt(document.getElementById('cr-bolsa-noches').value)||0;
   const bolsaValor=parseFloat(document.getElementById('cr-bolsa-valor').value)||0;
-  const santi=document.getElementById('r-santi-m1').value==='si';
+  const santiP=getSantiProps();
+  const santi=santiP.label!=='no';
   const tipo=document.getElementById('r-tipo').value;
   // Booking commission on bolsa block
   const bolsaComision=tipo==='Booking'?round2(bolsaValor*0.18):0;
@@ -1154,9 +1178,9 @@ function calcCruzada(){
   html+=`<div class="sep"></div><div style="font-size:12px;font-weight:600;color:var(--orange);margin-bottom:6px;margin-top:6px">Bloque Bolsa</div>`;
   if(bolsaComision>0) html+=`<div class="distrib-row"><span class="distrib-name">Comisión Booking (18%)</span><span class="distrib-val val-red">-${fmt(bolsaComision)}</span></div>`;
   html+=`<div class="distrib-row"><span class="distrib-name">Admon Sergio (10%)</span><span class="distrib-val val-orange">${fmt(bolsaAdmon)}</span></div>`;
-  html+=`<div class="distrib-row"><span class="distrib-name">Juan David Bridge (50%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.5)}</span></div>`;
-  html+=`<div class="distrib-row"><span class="distrib-name">Sergio Arango (${santi?'25':'50'}%)</span><span class="distrib-val val-green">${fmt(bolsaResto*(santi?0.25:0.5))}</span></div>`;
-  if(santi)html+=`<div class="distrib-row"><span class="distrib-name">Santiago Arango (25%)</span><span class="distrib-val val-green">${fmt(bolsaResto*0.25)}</span></div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name">Juan David Bridge (${(santiP.jd*100).toFixed(1)}%)</span><span class="distrib-val val-green">${fmt(bolsaResto*santiP.jd)}</span></div>`;
+  html+=`<div class="distrib-row"><span class="distrib-name">Sergio Arango (${(santiP.ser*100).toFixed(1)}%)</span><span class="distrib-val val-green">${fmt(bolsaResto*santiP.ser)}</span></div>`;
+  if(santi)html+=`<div class="distrib-row"><span class="distrib-name">Santiago Arango (${(santiP.san*100).toFixed(1)}%${santiP.label==='parcial'?' · '+santiP.dias+' día(s)':''})</span><span class="distrib-val val-green">${fmt(bolsaResto*santiP.san)}</span></div>`;
   html+=`<div class="sep"></div><div class="distrib-row"><span class="distrib-name" style="font-weight:600">Total reserva</span><span class="distrib-val" style="font-size:14px">${fmt(totalBruto)}</span></div>`;
   document.getElementById('cr-distrib-content').innerHTML=html;
   document.getElementById('cr-distrib').style.display='block';
@@ -1280,7 +1304,12 @@ function calcDistrib(){
   if((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')){feeResort=getFeeResort();document.getElementById('r-fee-val').value=fmt(feeResort);}
   const neto=bruto-comision;
   if(p==='L3'&&tipo==='Directo')document.getElementById('r-fee-comercial').value=fmt(neto*0.1);
-  const r={prop:p,tipo,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches:getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value),aseo:p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0,semana,santi_m1:p==='M1'?document.getElementById('r-santi-m1').value:'',santi_h4:p==='H4'?document.getElementById('r-santi-h4').value:'',h4_modo,gestor:(document.getElementById('r-gestor')||{}).value||'sergio',fee_resort_historico:feeResort};
+  const r={prop:p,tipo,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches:getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value),aseo:p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0,semana,santi_m1:(()=>{
+      if(p!=='M1') return '';
+      const v=document.getElementById('r-santi-m1').value;
+      if(v==='parcial'){const d=parseInt(document.getElementById('r-santi-dias').value)||1;return 'parcial:'+d;}
+      return v;
+    })(),santi_h4:p==='H4'?document.getElementById('r-santi-h4').value:'',h4_modo,gestor:(document.getElementById('r-gestor')||{}).value||'sergio',fee_resort_historico:feeResort};
   const items=getDistrib(r);
   document.getElementById('distrib-box').style.display='block';
   document.getElementById('distrib-content').innerHTML=items.map(d=>`<div class="distrib-row"><span class="distrib-name">${d.n}</span><span class="distrib-val ${d.t==='costo'?'val-red':d.t==='admon'?'val-orange':'val-green'}">${fmt(d.v)}</span></div>`).join('');
@@ -1293,7 +1322,20 @@ function getDistrib(r){
   else if(r.prop==='M1'){
     const admon=(r.bruto||0)*0.1,resto=neto-admon;
     if(r.semana==='Nico'){const fr=r.fee_resort_historico||0;items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort (absorbe Nicolás)',v:-fr,t:'costo'},{n:'Nicolás Velásquez',v:resto-fr,t:'ingreso'}];}
-    else{const santi=r.santi_m1==='si';items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango ('+(santi?'25':'50')+'%)',v:resto*(santi?0.25:0.5),t:'ingreso'}];if(santi)items.push({n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'});}
+    else{
+      const sm=r.santi_m1;
+      let jdP,serP,sanP;
+      if(sm==='no'||!sm){jdP=0.5;serP=0.5;sanP=0;}
+      else if(sm==='si'){jdP=0.5;serP=0.25;sanP=0.25;}
+      else if(sm&&sm.startsWith('parcial:')){
+        const dias=parseInt(sm.split(':')[1])||1;
+        const total=14+7+dias;
+        jdP=14/total;serP=7/total;sanP=dias/total;
+      } else {jdP=0.5;serP=0.5;sanP=0;}
+      const hasSanti=sanP>0;
+      items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Juan David Bridge ('+Math.round(jdP*100)+'%)',v:resto*jdP,t:'ingreso'},{n:'Sergio Arango ('+Math.round(serP*100)+'%)',v:resto*serP,t:'ingreso'}];
+      if(hasSanti)items.push({n:'Santiago Arango ('+Math.round(sanP*100)+'%)',v:resto*sanP,t:'ingreso'});
+    }
   }else if(r.prop==='L3'){
     if(r.tipo==='Directo'){const fee=neto*0.1,resto=neto-fee,gn=r.gestor==='sergio'?'Sergio Arango':r.gestor==='alejandro'?'Alejandro Londoño':'Tercero';items=[{n:'Fee comercial → '+gn,v:fee,t:'admon'},{n:'Sergio Arango (50%)',v:resto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:resto*0.5,t:'ingreso'}];}
     else{items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Sergio Arango (50%)',v:neto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:neto*0.5,t:'ingreso'}];}
@@ -1357,6 +1399,7 @@ async function guardarReserva(){
   const personas=parseInt(document.getElementById('r-personas').value)||1;
   const aseo=p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0;
   const semana=p==='M1'?document.getElementById('r-semana').value:null;
+  const santi_m1_val=(()=>{if(p!=='M1')return null;const v=document.getElementById('r-santi-m1').value;if(v==='parcial'){const d=parseInt(document.getElementById('r-santi-dias').value)||1;return 'parcial:'+d;}return v;})();
   const santi_m1=p==='M1'?document.getElementById('r-santi-m1').value:null;
   const santi_h4=p==='H4'?document.getElementById('r-santi-h4').value:null;
   const h4_modo=p==='H4'?document.getElementById('r-h4-modo').value:null;
@@ -1370,7 +1413,7 @@ async function guardarReserva(){
       const esBolsaH4=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
       const trimestre=esBolsaH4?(document.getElementById('r-h4-trimestre').value+'-'+document.getElementById('r-h4-anio').value):null;
       const huesped_final=esBolsaH4?('BOLSA OXO '+trimestre):h;
-      return JSON.stringify({prop:p,tipo:t,huesped:huesped_final,entrada:e,salida:s,bruto,comision:esBolsaH4?0:comision,comision_pasarela:0,neto:esBolsaH4?bruto:neto,personas:esBolsaH4?1:parseInt(document.getElementById('r-personas').value)||1,noches,aseo:esBolsaH4?0:aseo,semana,santi_m1,santi_h4,h4_modo,temporada:esBolsaH4?trimestre:'baja',gestor,fee_resort_historico:0,estado_pago:esBolsaH4?'pagado':esUsoSocio?'no_paga':'pendiente'});
+      return JSON.stringify({prop:p,tipo:t,huesped:huesped_final,entrada:e,salida:s,bruto,comision:esBolsaH4?0:comision,comision_pasarela:0,neto:esBolsaH4?bruto:neto,personas:esBolsaH4?1:parseInt(document.getElementById('r-personas').value)||1,noches,aseo:esBolsaH4?0:aseo,semana,santi_m1:p==='M1'?santi_m1_val:santi_m1,santi_h4,h4_modo,temporada:esBolsaH4?trimestre:'baja',gestor,fee_resort_historico:0,estado_pago:esBolsaH4?'pagado':esUsoSocio?'no_paga':'pendiente'});
     })()});
     (()=>{
       const esBolsaH4=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
@@ -1565,10 +1608,17 @@ function getSociosDistrib(r, monto, feeResort=0){
   if(prop==='M1'){
     // Semana Nico: el fee resort ya fue descontado, el resto es para Nico
     if(r.semana==='Nico') return [{n:'Nicolás Velásquez (neto)',v:monto}];
-    // Bolsa: JD 50%, Sergio 25%, Santiago 25% (si aportó)
-    const santi=santi_m1==='si';
-    const res=[{n:'Juan David Bridge',v:monto*0.5},{n:'Sergio Arango',v:monto*(santi?0.25:0.5)}];
-    if(santi) res.push({n:'Santiago Arango',v:monto*0.25});
+    // Bolsa: proporciones según santi_m1
+    let jdP,serP,sanP;
+    if(santi_m1==='no'||!santi_m1){jdP=0.5;serP=0.5;sanP=0;}
+    else if(santi_m1==='si'){jdP=0.5;serP=0.25;sanP=0.25;}
+    else if(santi_m1&&santi_m1.startsWith('parcial:')){
+      const dias=parseInt(santi_m1.split(':')[1])||1;
+      const total=14+7+dias;
+      jdP=14/total;serP=7/total;sanP=dias/total;
+    } else {jdP=0.5;serP=0.5;sanP=0;}
+    const res=[{n:'Juan David Bridge',v:monto*jdP},{n:'Sergio Arango',v:monto*serP}];
+    if(sanP>0) res.push({n:'Santiago Arango',v:monto*sanP});
     return res;
   }
   return [{n:'Sergio Arango',v:monto}];
@@ -1683,6 +1733,9 @@ function onSocioChange(){
 function limpiarForm(){
   // Reset uso-socio toggle
   const usoSocioEl=document.getElementById('r-uso-socio');if(usoSocioEl){usoSocioEl.checked=false;}
+  const santiSelEl=document.getElementById('r-santi-m1');if(santiSelEl)santiSelEl.value='si';
+  const santiDiasEl=document.getElementById('r-santi-dias');if(santiDiasEl)santiDiasEl.value='1';
+  const santiDiasBox=document.getElementById('x-santi-dias');if(santiDiasBox)santiDiasBox.style.display='none';
   const socioSelEl=document.getElementById('x-socio-selector');if(socioSelEl)socioSelEl.style.display='none';
   const socioNomEl=document.getElementById('r-socio-nombre');if(socioNomEl)socioNomEl.value='';
   ['r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.closest('.form-group').style.opacity='1';});
