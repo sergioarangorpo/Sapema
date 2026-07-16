@@ -399,6 +399,54 @@
 
   <!-- NUEVA RESERVA -->
   <div id="section-reservas" class="section">
+    <!-- RECALCULAR BOLSA M1 -->
+    <div class="card" style="border:1px solid #B8D4E8;background:var(--blue-bg);">
+      <div class="card-title" style="color:var(--blue)"><i class="ti ti-refresh"></i> Recalcular bolsa M1 por mes</div>
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">Actualiza la participación de Santiago en todas las reservas de bolsa M1 de un mes. Útil cuando cambia su aportación de días.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Mes</label>
+          <select id="rc-mes">
+            <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+            <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+            <option value="07">Julio</option><option value="08" selected>Agosto</option><option value="09">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <select id="rc-anio">
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Participación de Santiago</label>
+          <select id="rc-santi" onchange="onRcSantiChange()">
+            <option value="si">Completo — 25%</option>
+            <option value="parcial">Parcial — ingresa días</option>
+            <option value="no">No participa — solo JD y Sergio</option>
+          </select>
+        </div>
+        <div class="form-group" id="rc-dias-box" style="display:none">
+          <label>Días que aportó Santiago</label>
+          <input type="number" id="rc-dias" min="1" max="6" value="1" placeholder="1–6">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="previsualizarRecalculo()" style="margin-top:4px;background:var(--blue);border-color:var(--blue)">
+        <i class="ti ti-eye"></i> Ver reservas afectadas
+      </button>
+      <div id="rc-preview" style="display:none;margin-top:16px;">
+        <div class="sep"></div>
+        <div id="rc-preview-content"></div>
+        <button class="btn btn-success" id="rc-aplicar-btn" onclick="aplicarRecalculo()" style="margin-top:12px;">
+          <i class="ti ti-check"></i> Aplicar a todas las reservas
+        </button>
+      </div>
+      <div id="rc-msg" style="margin-top:8px;"></div>
+    </div>
+
     <div class="card">
       <div class="card-title"><i class="ti ti-plus"></i> Registrar reserva / ingreso</div>
       <div class="form-grid">
@@ -1051,6 +1099,120 @@ function getSantiProps(){
   const dias=parseInt(document.getElementById('r-santi-dias').value)||1;
   const total=14+7+dias;
   return {jd:14/total,ser:7/total,san:dias/total,label:'parcial',dias};
+}
+
+
+function onRcSantiChange(){
+  const val=document.getElementById('rc-santi').value;
+  document.getElementById('rc-dias-box').style.display=val==='parcial'?'flex':'none';
+}
+
+function getRcSantiVal(){
+  const v=document.getElementById('rc-santi').value;
+  if(v==='parcial'){
+    const d=parseInt(document.getElementById('rc-dias').value)||1;
+    return 'parcial:'+d;
+  }
+  return v;
+}
+
+function getRcProps(santiVal){
+  if(santiVal==='no') return {jd:0.5,ser:0.5,san:0,pct:'JD 50% · Sergio 50%'};
+  if(santiVal==='si') return {jd:0.5,ser:0.25,san:0.25,pct:'JD 50% · Sergio 25% · Santiago 25%'};
+  const dias=parseInt(santiVal.split(':')[1])||1;
+  const total=14+7+dias;
+  return {jd:14/total,ser:7/total,san:dias/total,
+    pct:'JD '+(14/total*100).toFixed(1)+'% · Sergio '+(7/total*100).toFixed(1)+'% · Santiago '+(dias/total*100).toFixed(1)+'% ('+dias+' día'+(dias>1?'s':'')+')'};
+}
+
+let _rcReservas=[]; // reservas a actualizar
+
+function previsualizarRecalculo(){
+  const mes=document.getElementById('rc-mes').value;
+  const anio=document.getElementById('rc-anio').value;
+  const santiVal=getRcSantiVal();
+  const props=getRcProps(santiVal);
+  const mesStr=anio+'-'+mes;
+
+  // Filtrar reservas bolsa M1 del mes
+  _rcReservas=todasReservas.filter(r=>
+    r.prop==='M1' &&
+    r.semana==='bolsa' &&
+    r.entrada &&
+    r.entrada.startsWith(mesStr)
+  );
+
+  const preview=document.getElementById('rc-preview');
+  const cont=document.getElementById('rc-preview-content');
+
+  if(_rcReservas.length===0){
+    cont.innerHTML='<div style="color:var(--text-3);font-size:13px;padding:8px 0">No hay reservas de bolsa M1 en '+mes+'/'+anio+'.</div>';
+    document.getElementById('rc-aplicar-btn').style.display='none';
+    preview.style.display='block';
+    return;
+  }
+
+  let html=`<div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;">
+    ${_rcReservas.length} reserva(s) de bolsa M1 en ${mes}/${anio} → ${props.pct}
+  </div>`;
+  html+='<table style="width:100%;font-size:12px;border-collapse:collapse;">';
+  html+='<thead><tr style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.4px;">';
+  html+='<th style="padding:4px 8px;text-align:left">Huésped</th><th style="padding:4px 8px;text-align:left">Entrada</th><th style="padding:4px 8px;text-align:right">Bruto</th>';
+  html+='<th style="padding:4px 8px;text-align:right">JD</th><th style="padding:4px 8px;text-align:right">Sergio</th><th style="padding:4px 8px;text-align:right">Santiago</th>';
+  html+='<th style="padding:4px 8px;text-align:left">Antes</th></tr></thead><tbody>';
+
+  _rcReservas.forEach(r=>{
+    const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
+    const admon=(r.bruto||0)*0.1;
+    const resto=neto-admon;
+    const jdAmt=resto*props.jd;
+    const serAmt=resto*props.ser;
+    const sanAmt=resto*props.san;
+    const antes=r.santi_m1==='si'?'Completo':r.santi_m1==='no'?'No participa':r.santi_m1||'—';
+    html+=`<tr style="border-top:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:500">${r.huesped||'—'}</td>
+      <td style="padding:6px 8px;color:var(--text-2)">${r.entrada}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace">${fmt(r.bruto||0)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--green)">${fmt(jdAmt)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--green)">${fmt(serAmt)}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--green)">${fmt(sanAmt)}</td>
+      <td style="padding:6px 8px;color:var(--text-3);font-size:11px">${antes}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+
+  cont.innerHTML=html;
+  document.getElementById('rc-aplicar-btn').style.display='inline-flex';
+  preview.style.display='block';
+}
+
+async function aplicarRecalculo(){
+  if(!_rcReservas.length) return;
+  const santiVal=getRcSantiVal();
+  const btn=document.getElementById('rc-aplicar-btn');
+  btn.disabled=true;btn.textContent='Actualizando...';
+
+  try{
+    // Actualizar cada reserva en Supabase
+    let ok=0,fail=0;
+    for(const r of _rcReservas){
+      try{
+        await supaFetch(`/rest/v1/reservas?id=eq.${r.id}`,{
+          method:'PATCH',
+          body:JSON.stringify({santi_m1:santiVal})
+        });
+        ok++;
+      }catch(e){fail++;}
+    }
+    await loadReservas();
+    showMsg('rc-msg', ok+' reserva(s) de bolsa M1 actualizadas'+(fail>0?' - '+fail+' error(es)':''), 'success');
+    document.getElementById('rc-preview').style.display='none';
+    _rcReservas=[];
+  }catch(e){
+    showMsg('rc-msg','Error al actualizar: '+e.message,'danger');
+  }finally{
+    btn.disabled=false;btn.textContent='✓ Aplicar a todas las reservas';
+  }
 }
 
 function onPropChange(){
