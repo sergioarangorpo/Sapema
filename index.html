@@ -1380,7 +1380,7 @@ async function guardarCruzada(){
       prop:'M1',tipo,huesped:huesped.toUpperCase(),entrada,salida,
       bruto:nicoValor,comision:0,comision_pasarela:0,neto:nicoValor,
       personas,noches:nicoNoches,aseo:0,semana:'Nico',santi_m1:null,
-      fee_resort_historico:feeResort,estado_pago:esUsoSocio?'no_paga':'pendiente'
+      fee_resort_historico:feeResort,estado_pago:'pendiente'
     })});
     // Save Bolsa block
     await supaFetch('/rest/v1/reservas',{method:'POST',body:JSON.stringify({
