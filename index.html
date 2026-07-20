@@ -1488,7 +1488,7 @@ function getDistrib(r){
   if(r.prop==='GO'){items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Aseo',v:-(r.aseo||0),t:'costo'},{n:'Sergio Arango (100%)',v:neto-(r.aseo||0),t:'ingreso'}];}
   else if(r.prop==='M1'){
     const admon=(r.bruto||0)*0.1,resto=neto-admon;
-    if(r.semana==='Nico'){const fr=r.fee_resort_historico||0;items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort (absorbe Nicolás)',v:-fr,t:'costo'},{n:'Nicolás Velásquez',v:resto-fr,t:'ingreso'}];}
+    if(r.semana==='Nico'){let fr=r.fee_resort_historico||0;if(!fr&&r.estado_pago!=='pagado'){fr=(r.noches||0)*(r.personas||1)*80000;}items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort (absorbe Nicolás)',v:-fr,t:'costo'},{n:'Nicolás Velásquez',v:resto-fr,t:'ingreso'}];}
     else{
       const sm=r.santi_m1;
       let jdP,serP,sanP;
