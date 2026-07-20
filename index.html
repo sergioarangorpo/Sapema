@@ -290,6 +290,7 @@
     <button class="nav-btn" onclick="showSection('reportes',this)"><i class="ti ti-file-text"></i> Reportes</button>
     <button class="nav-btn" onclick="showSection('calendario',this)"><i class="ti ti-calendar"></i> Disponibilidad</button>
     <button class="nav-btn" onclick="showSection('semanas',this)"><i class="ti ti-calendar-week"></i> Semanas M1</button>
+    <button class="nav-btn" onclick="showSection('liquidaciones',this)"><i class="ti ti-receipt"></i> Liquidaciones</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -627,6 +628,45 @@
         <button class="btn btn-secondary" onclick="limpiarForm()">Limpiar</button>
       </div>
       <div id="r-msg" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- LIQUIDACIONES -->
+  <div id="section-liquidaciones" class="section">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-receipt"></i> Liquidaciones por reserva</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <select id="liq-f-prop" onchange="renderLiquidaciones()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="">Todas las propiedades</option>
+          <option value="GO">GO Living</option>
+          <option value="M1">Villa M1</option>
+          <option value="L3">Villa L3</option>
+          <option value="H4">Villa H4</option>
+        </select>
+        <select id="liq-f-mes" onchange="renderLiquidaciones()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="">Todos los meses</option>
+          <option value="2026-01">Ene 2026</option><option value="2026-02">Feb 2026</option>
+          <option value="2026-03">Mar 2026</option><option value="2026-04">Abr 2026</option>
+          <option value="2026-05">May 2026</option><option value="2026-06">Jun 2026</option>
+          <option value="2026-07" selected>Jul 2026</option><option value="2026-08">Ago 2026</option>
+          <option value="2026-09">Sep 2026</option><option value="2026-10">Oct 2026</option>
+          <option value="2026-11">Nov 2026</option><option value="2026-12">Dic 2026</option>
+          <option value="2027-01">Ene 2027</option><option value="2027-02">Feb 2027</option>
+          <option value="2027-03">Mar 2027</option><option value="2027-04">Abr 2027</option>
+          <option value="2027-05">May 2027</option><option value="2027-06">Jun 2027</option>
+          <option value="2027-07">Jul 2027</option><option value="2027-08">Ago 2027</option>
+          <option value="2027-09">Sep 2027</option><option value="2027-10">Oct 2027</option>
+          <option value="2027-11">Nov 2027</option><option value="2027-12">Dic 2027</option>
+        </select>
+        <select id="liq-f-estado" onchange="renderLiquidaciones()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="">Todos los estados</option>
+          <option value="pagado">Pagado</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="abono">Abono</option>
+        </select>
+      </div>
+      <div id="liq-tabla-cont"></div>
+      <div id="liq-totales" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -1033,6 +1073,7 @@ function showSection(id,btn){
   if(id==='dashboard')renderDashboard();
   if(id==='reportes')initReporte();
   if(id==='calendario'){initCalendario();renderDisponibilidad();}
+  if(id==='liquidaciones')renderLiquidaciones();
 }
 
 
@@ -2457,6 +2498,118 @@ function generarRepComisiones(){
 
   document.getElementById('rep-comisiones-tabla').innerHTML=html;
   document.getElementById('rep-comisiones-contenido').style.display='block';
+}
+
+
+function renderLiquidaciones(){
+  const fProp=document.getElementById('liq-f-prop').value;
+  const fMes=document.getElementById('liq-f-mes').value;
+  const fEstado=document.getElementById('liq-f-estado').value;
+
+  let lista=todasReservas.filter(r=>{
+    if(r.estado_pago==='no_paga') return false;
+    if(fProp&&r.prop!==fProp) return false;
+    if(fMes&&r.entrada&&!r.entrada.startsWith(fMes)) return false;
+    if(fEstado&&r.estado_pago!==fEstado) return false;
+    return true;
+  });
+
+  // Ordenar por entrada desc
+  lista.sort((a,b)=>(b.entrada||'').localeCompare(a.entrada||''));
+
+  const cont=document.getElementById('liq-tabla-cont');
+  if(lista.length===0){
+    cont.innerHTML='<div style="color:var(--text-3);font-size:13px;padding:16px 0">No hay reservas con estos filtros.</div>';
+    document.getElementById('liq-totales').innerHTML='';
+    return;
+  }
+
+  // Totales acumulados por socio
+  const tots={sergio:0,alejandro:0,jd:0,santi:0,nico:0};
+
+  let html='<div class="table-wrap"><table style="table-layout:fixed;width:100%">';
+  html+='<colgroup>'+
+    '<col style="width:80px">'+   // Villa
+    '<col style="width:150px">'+  // Huésped
+    '<col style="width:85px">'+   // Check in
+    '<col style="width:50px">'+   // Noches
+    '<col style="width:95px">'+   // Sergio
+    '<col style="width:95px">'+   // Alejandro
+    '<col style="width:95px">'+   // JD
+    '<col style="width:95px">'+   // Santiago
+    '<col style="width:95px">'+   // Nicolás
+    '<col style="width:85px">'+   // Estado
+    '</colgroup>';
+  html+='<thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-3);">';
+  html+='<th style="padding:6px 8px">Villa</th>';
+  html+='<th style="padding:6px 8px">Huésped</th>';
+  html+='<th style="padding:6px 8px">Check in</th>';
+  html+='<th style="padding:6px 8px;text-align:center">Noches</th>';
+  html+='<th style="padding:6px 8px;text-align:right">Sergio</th>';
+  html+='<th style="padding:6px 8px;text-align:right">Alejandro</th>';
+  html+='<th style="padding:6px 8px;text-align:right">JD Bridge</th>';
+  html+='<th style="padding:6px 8px;text-align:right">Santiago</th>';
+  html+='<th style="padding:6px 8px;text-align:right">Nicolás</th>';
+  html+='<th style="padding:6px 8px;text-align:center">Estado</th>';
+  html+='</tr></thead><tbody>';
+
+  lista.forEach(r=>{
+    const distrib=getDistrib(r);
+    const isPending=r.estado_pago==='pendiente'||r.estado_pago==='abono';
+
+    // Calcular valor por socio
+    function valSocio(nombre){
+      const match=distrib.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes(nombre.toLowerCase()));
+      return match.reduce((s,d)=>s+d.v,0);
+    }
+
+    const vSergio  = valSocio('Sergio');
+    const vAlej    = r.prop==='L3'?valSocio('Alejandro'):0;
+    const vJD      = r.prop!=='L3'?valSocio('Juan David'):0;
+    const vSanti   = valSocio('Santiago');
+    const vNico    = valSocio('Nicolas')||valSocio('Velasquez');
+
+    tots.sergio    += vSergio;
+    tots.alejandro += vAlej;
+    tots.jd        += vJD;
+    tots.santi     += vSanti;
+    tots.nico      += vNico;
+
+    const mono="font-family:'DM Mono',monospace;font-size:12px;";
+    const cel=(v,color='')=>v>0?'<td style="padding:5px 8px;text-align:right;'+mono+(color?'color:'+color+';':'')+(isPending?'opacity:0.7':'')+'">'+fmt(v)+'</td>':'<td style="padding:5px 8px;text-align:right;color:var(--text-3);font-size:12px;">—</td>';
+
+    const estadoBadge=r.estado_pago==='pagado'?'<span class="estado estado-pagado">PAGADO</span>':
+      r.estado_pago==='abono'?'<span class="estado estado-abono">ABONO</span>':
+      '<span class="estado estado-pendiente">PEND.</span>';
+
+    html+='<tr style="border-top:1px solid var(--border-light);">';
+    html+='<td style="padding:5px 8px;font-size:12px;"><span style="color:var(--'+r.prop.toLowerCase()+');font-weight:600">'+PROPS[r.prop].nombre+'</span></td>';
+    html+='<td style="padding:5px 8px;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(r.huesped||'')+'">'+(r.huesped||'—')+'</td>';
+    html+='<td style="padding:5px 8px;font-size:12px;color:var(--text-2);">'+(r.entrada||'')+'</td>';
+    html+='<td style="padding:5px 8px;font-size:12px;text-align:center;">'+(r.noches||'—')+'</td>';
+    html+=cel(vSergio,'var(--blue)');
+    html+=cel(vAlej,'var(--green)');
+    html+=cel(vJD,'var(--orange)');
+    html+=cel(vSanti,'var(--h4)');
+    html+=cel(vNico,'#148F77');
+    html+='<td style="padding:5px 8px;text-align:center;">'+estadoBadge+'</td>';
+    html+='</tr>';
+  });
+
+  html+='</tbody></table></div>';
+  cont.innerHTML=html;
+
+  // Totales
+  const mono="font-family:'DM Mono',monospace;font-weight:600;";
+  let totHtml='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;display:flex;flex-wrap:wrap;gap:16px;font-size:12px;">';
+  totHtml+='<span style="color:var(--text-3);font-weight:500;align-self:center">TOTALES:</span>';
+  if(tots.sergio)  totHtml+='<span>Sergio <strong style="color:var(--blue);'+mono+'">'+fmt(tots.sergio)+'</strong></span>';
+  if(tots.alejandro) totHtml+='<span>Alejandro <strong style="color:var(--green);'+mono+'">'+fmt(tots.alejandro)+'</strong></span>';
+  if(tots.jd)      totHtml+='<span>JD Bridge <strong style="color:var(--orange);'+mono+'">'+fmt(tots.jd)+'</strong></span>';
+  if(tots.santi)   totHtml+='<span>Santiago <strong style="color:var(--h4);'+mono+'">'+fmt(tots.santi)+'</strong></span>';
+  if(tots.nico)    totHtml+='<span>Nicolás <strong style="color:#148F77;'+mono+'">'+fmt(tots.nico)+'</strong></span>';
+  totHtml+='</div>';
+  document.getElementById('liq-totales').innerHTML=totHtml;
 }
 
 function generarReporte(){
