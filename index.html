@@ -2045,26 +2045,15 @@ function renderChartSocios(){
   };
 
   lista.forEach(r=>{
-    if(r.pago_sapema!==null&&r.pago_sapema!==undefined&&r.estado_pago==='pagado'&&r.pago_sapema>0){
-      // Use stored payment values
-      socios['Sergio Arango']+=(r.pago_sapema||0)+(r.mng_fee||0);
-      if(r.prop==='L3'){
-        socios['Alejandro Londoño']+=(r.pago_jdbj||0);
-      } else {
-        socios['Juan David Bridge']+=(r.pago_jdbj||0);
-        socios['Santiago Arango']+=(r.pago_sar||0);
-      }
-      if(r.prop==='M1'&&r.semana==='Nico'){
-        socios['Nicolás Velásquez']+=(r.neto||0)-(r.fee_resort_historico||0)-(r.mng_fee||0);
-      }
-    } else {
-      // Calculate from distribution logic
-      getDistrib(r).filter(d=>d.t==='ingreso').forEach(d=>{
-        Object.keys(socios).forEach(s=>{
-          if(d.n.includes(s.split(' ')[0])&&d.n.includes(s.split(' ')[1]))socios[s]+=d.v;
-        });
+    // Excluir no_paga (uso de socio, $0)
+    if(r.estado_pago==='no_paga') return;
+    // Siempre calcular desde getDistrib para reflejar el periodo completo
+    // (pagadas, pendientes y abonos)
+    getDistrib(r).filter(d=>d.t==='ingreso').forEach(d=>{
+      Object.keys(socios).forEach(s=>{
+        if(d.n.includes(s.split(' ')[0])&&d.n.includes(s.split(' ')[1]))socios[s]+=d.v;
       });
-    }
+    });
   });
 
   const entries=Object.entries(socios).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
