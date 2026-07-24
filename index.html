@@ -674,41 +674,44 @@
   <div id="section-reservas-rc" class="section">
     <div class="card" style="border:1px solid #B8D4E8;background:var(--blue-bg);">
       <div class="card-title" style="color:var(--blue)"><i class="ti ti-refresh"></i> Recalcular participacion bolsa M1</div>
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">Actualiza la participacion de los socios en todas las reservas de bolsa M1 de un mes cuando alguno cambia sus dias aportados.</p>
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">Ingresa los dias reales aportados por cada socio este mes. Si alguien fue completo dejalo en sus dias base.</p>
       <div class="form-grid">
         <div class="form-group"><label>Mes</label>
-          <select id="rc-mes">
+          <select id="rc-mes" onchange="actualizarRcResumen()">
             <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
             <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
-            <option value="07">Julio</option><option value="08" selected>Agosto</option><option value="09">Septiembre</option>
+            <option value="07" selected>Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
             <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
           </select>
         </div>
         <div class="form-group"><label>Ano</label>
-          <select id="rc-anio">
+          <select id="rc-anio" onchange="actualizarRcResumen()">
             <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
           </select>
         </div>
-        <div class="form-group"><label>Socio con cambio de dias</label>
-          <select id="rc-socio" onchange="onRcSocioChange()">
-            <option value="santi">Santiago Arango (base 7 dias)</option>
-            <option value="jd">Juan David Bridge (base 14 dias)</option>
-            <option value="sergio">Sergio Arango (base 7 dias)</option>
-          </select>
+      </div>
+      <!-- Dias por socio -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
+        <div class="form-group" style="background:var(--surface);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border);">
+          <label style="color:var(--orange);font-weight:600">Juan David Bridge</label>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">Base: 14 dias</div>
+          <input type="number" id="rc-dias-jd" min="0" max="14" value="14" oninput="actualizarRcResumen()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;">
+          <div style="font-size:10px;color:var(--text-3);margin-top:4px;">0 = no participa</div>
         </div>
-        <div class="form-group"><label>Participacion</label>
-          <select id="rc-participacion" onchange="onRcParticipacionChange()">
-            <option value="completo">Completo - dias base</option>
-            <option value="parcial">Parcial - ingresa dias</option>
-            <option value="no">No participa este mes</option>
-          </select>
+        <div class="form-group" style="background:var(--surface);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border);">
+          <label style="color:var(--blue);font-weight:600">Sergio Arango</label>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">Base: 7 dias</div>
+          <input type="number" id="rc-dias-sergio" min="0" max="7" value="7" oninput="actualizarRcResumen()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;">
+          <div style="font-size:10px;color:var(--text-3);margin-top:4px;">0 = no participa</div>
         </div>
-        <div class="form-group" id="rc-dias-box" style="display:none">
-          <label id="rc-dias-label">Dias que aporto</label>
-          <input type="number" id="rc-dias" min="1" max="13" value="1" placeholder="dias" oninput="actualizarRcResumen()">
+        <div class="form-group" style="background:var(--surface);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border);">
+          <label style="color:var(--h4);font-weight:600">Santiago Arango</label>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">Base: 7 dias</div>
+          <input type="number" id="rc-dias-santi" min="0" max="7" value="7" oninput="actualizarRcResumen()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;">
+          <div style="font-size:10px;color:var(--text-3);margin-top:4px;">0 = no participa</div>
         </div>
       </div>
-      <div id="rc-resumen" style="font-size:12px;color:var(--text-2);margin:8px 0 12px;padding:8px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);display:none;"></div>
+      <div id="rc-resumen" style="font-size:12px;color:var(--text-2);margin:0 0 12px;padding:10px 14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);"></div>
       <button class="btn btn-primary" onclick="previsualizarRecalculo()" style="background:var(--blue);border-color:var(--blue)">
         <i class="ti ti-eye"></i> Ver reservas afectadas
       </button>
@@ -1074,6 +1077,7 @@ function showSection(id,btn){
   if(id==='reportes')initReporte();
   if(id==='calendario'){initCalendario();renderDisponibilidad();}
   if(id==='liquidaciones')renderLiquidaciones();
+  if(id==='reservas'){setTimeout(actualizarRcResumen,100);}
 }
 
 
@@ -1151,46 +1155,31 @@ function getSantiProps(){
 
 const BASE_DIAS={jd:14,sergio:7,santi:7};
 
-function onRcSocioChange(){
-  actualizarRcResumen();
-  document.getElementById('rc-preview').style.display='none';
-}
-
-function onRcParticipacionChange(){
-  const p=document.getElementById('rc-participacion').value;
-  const socio=document.getElementById('rc-socio').value;
-  document.getElementById('rc-dias-box').style.display=p==='parcial'?'flex':'none';
-  const maxDias=BASE_DIAS[socio]-1;
-  document.getElementById('rc-dias').max=maxDias;
-  document.getElementById('rc-dias-label').textContent='Dias que aporto (max '+maxDias+')';
-  actualizarRcResumen();
-}
-
 function calcRcProps(){
-  const socio=document.getElementById('rc-socio').value;
-  const part=document.getElementById('rc-participacion').value;
-  const diasInput=parseInt(document.getElementById('rc-dias').value)||1;
-  let diasJD=BASE_DIAS.jd,diasSer=BASE_DIAS.sergio,diasSan=BASE_DIAS.santi;
-  if(part==='no'){if(socio==='jd')diasJD=0;else if(socio==='sergio')diasSer=0;else diasSan=0;}
-  else if(part==='parcial'){if(socio==='jd')diasJD=diasInput;else if(socio==='sergio')diasSer=diasInput;else diasSan=diasInput;}
+  const diasJD=parseInt(document.getElementById('rc-dias-jd').value)||0;
+  const diasSer=parseInt(document.getElementById('rc-dias-sergio').value)||0;
+  const diasSan=parseInt(document.getElementById('rc-dias-santi').value)||0;
   const total=diasJD+diasSer+diasSan;
   if(total===0)return{jd:0,ser:0,san:0,total:0,diasJD,diasSer,diasSan,pct:'Sin participantes'};
   const jd=diasJD/total,ser=diasSer/total,san=diasSan/total;
-  const pct='JD '+(jd*100).toFixed(1)+'% - Sergio '+(ser*100).toFixed(1)+'%'+(san>0?' - Santiago '+(san*100).toFixed(1)+'%':'');
-  return{jd,ser,san,total,diasJD,diasSer,diasSan,pct};
+  const parts=[];
+  if(jd>0)parts.push('JD '+(jd*100).toFixed(1)+'% ('+diasJD+' dias)');
+  if(ser>0)parts.push('Sergio '+(ser*100).toFixed(1)+'% ('+diasSer+' dias)');
+  if(san>0)parts.push('Santiago '+(san*100).toFixed(1)+'% ('+diasSan+' dias)');
+  return{jd,ser,san,total,diasJD,diasSer,diasSan,pct:parts.join(' - ')};
 }
 
 function getSantiM1Val(props){
   if(props.san===0)return 'no';
-  if(props.diasSan===BASE_DIAS.santi)return 'si';
+  if(props.diasSan===BASE_DIAS.santi&&props.diasJD===BASE_DIAS.jd&&props.diasSer===BASE_DIAS.sergio)return 'si';
   return 'parcial:'+props.diasSan;
 }
 
 function actualizarRcResumen(){
+  document.getElementById('rc-preview').style.display='none';
   const props=calcRcProps();
   const el=document.getElementById('rc-resumen');
-  el.style.display='block';
-  el.innerHTML='Nueva distribucion: <strong>'+props.pct+'</strong> ('+props.total+' dias totales)';
+  el.innerHTML='<strong>Nueva distribucion:</strong> '+props.pct+' &nbsp;|&nbsp; Total: '+props.total+' dias';
 }
 
 let _rcReservas=[];
@@ -1211,14 +1200,15 @@ function previsualizarRecalculo(){
     preview.style.display='block';
     return;
   }
-  let html='<div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;">'+_rcReservas.length+' reserva(s) bolsa M1 en '+mesNombre+' '+anio+' => '+props.pct+'</div>';
+  let html='<div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;">'+_rcReservas.length+' reserva(s) bolsa M1 en '+mesNombre+' '+anio+'</div>';
+  html+='<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;">'+props.pct+'</div>';
   html+='<div class="table-wrap"><table style="width:100%;font-size:12px;border-collapse:collapse;">';
   html+='<thead><tr style="color:var(--text-3);font-size:10px;text-transform:uppercase;">';
   html+='<th style="padding:4px 8px;text-align:left">Huesped</th><th style="padding:4px 8px;text-align:left">Entrada</th><th style="padding:4px 8px;text-align:right">Bruto</th>';
-  html+='<th style="padding:4px 8px;text-align:right">JD ('+(props.jd*100).toFixed(1)+'%)</th>';
-  html+='<th style="padding:4px 8px;text-align:right">Sergio ('+(props.ser*100).toFixed(1)+'%)</th>';
+  if(props.jd>0)html+='<th style="padding:4px 8px;text-align:right">JD ('+(props.jd*100).toFixed(1)+'%)</th>';
+  if(props.ser>0)html+='<th style="padding:4px 8px;text-align:right">Sergio ('+(props.ser*100).toFixed(1)+'%)</th>';
   if(props.san>0)html+='<th style="padding:4px 8px;text-align:right">Santiago ('+(props.san*100).toFixed(1)+'%)</th>';
-  html+='<th style="padding:4px 8px;text-align:left">Antes</th></tr></thead><tbody>';
+  html+='<th style="padding:4px 8px;text-align:left">Estado</th></tr></thead><tbody>';
   _rcReservas.forEach(r=>{
     const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
     const admon=(r.bruto||0)*0.1;
@@ -1229,11 +1219,26 @@ function previsualizarRecalculo(){
     html+='<td style="padding:6px 8px;font-weight:500">'+(r.huesped||'-')+'</td>';
     html+='<td style="padding:6px 8px;color:var(--text-2)">'+r.entrada+'</td>';
     html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace">'+fmt(r.bruto||0)+'</td>';
-    html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--green)">'+fmt(resto*props.jd)+'</td>';
-    html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--green)">'+fmt(resto*props.ser)+'</td>';
-    if(props.san>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--green)">'+fmt(resto*props.san)+'</td>';
-    html+='<td style="padding:6px 8px;color:var(--text-3);font-size:11px">'+antes+'</td></tr>';
+    if(props.jd>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(resto*props.jd)+'</td>';
+    if(props.ser>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(resto*props.ser)+'</td>';
+    if(props.san>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(resto*props.san)+'</td>';
+    html+='<td style="padding:6px 8px;color:var(--text-3);font-size:11px">'+estadoHtml2(r.estado_pago)+'</td></tr>';
   });
+  html+='</tbody></table></div>';
+  // Fila de totales
+  const tots={jd:0,ser:0,san:0};
+  _rcReservas.forEach(r=>{
+    const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
+    const admon=(r.bruto||0)*0.1;
+    const resto=neto-admon;
+    tots.jd+=resto*props.jd;tots.ser+=resto*props.ser;tots.san+=resto*props.san;
+  });
+  html+='<tr style="border-top:2px solid var(--border);font-weight:700;">';
+  html+='<td style="padding:6px 8px" colspan="3">TOTALES</td>';
+  if(props.jd>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(tots.jd)+'</td>';
+  if(props.ser>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(tots.ser)+'</td>';
+  if(props.san>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(tots.san)+'</td>';
+  html+='<td></td></tr>';
   html+='</tbody></table></div>';
   cont.innerHTML=html;
   document.getElementById('rc-aplicar-btn').style.display='inline-flex';
