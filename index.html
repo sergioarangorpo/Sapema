@@ -1191,11 +1191,14 @@ function previsualizarRecalculo(){
   const mesStr=anio+'-'+mes;
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const mesNombre=meses[parseInt(mes)-1];
-  _rcReservas=todasReservas.filter(r=>r.prop==='M1'&&r.semana==='bolsa'&&r.entrada&&r.entrada.startsWith(mesStr));
+  // Usar reservas globales — todasReservas o reservas como fallback
+  const fuente=(todasReservas&&todasReservas.length>0)?todasReservas:reservas;
+  _rcReservas=fuente.filter(r=>r.prop==='M1'&&r.semana==='bolsa'&&r.entrada&&r.entrada.startsWith(mesStr));
   const preview=document.getElementById('rc-preview');
   const cont=document.getElementById('rc-preview-content');
   if(_rcReservas.length===0){
-    cont.innerHTML='<div style="color:var(--text-3);font-size:13px;padding:8px 0">No hay reservas de bolsa M1 en '+mesNombre+' '+anio+'.</div>';
+    const totalFuente=(todasReservas&&todasReservas.length>0)?todasReservas.length:reservas.length;
+    cont.innerHTML='<div style="color:var(--text-3);font-size:13px;padding:8px 0">No hay reservas de bolsa M1 en '+mesNombre+' '+anio+'. ('+totalFuente+' reservas cargadas en total)</div>';
     document.getElementById('rc-aplicar-btn').style.display='none';
     preview.style.display='block';
     return;
