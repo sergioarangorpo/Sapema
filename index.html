@@ -1224,8 +1224,7 @@ function previsualizarRecalculo(){
     if(props.san>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(resto*props.san)+'</td>';
     html+='<td style="padding:6px 8px;color:var(--text-3);font-size:11px">'+estadoHtml2(r.estado_pago)+'</td></tr>';
   });
-  html+='</tbody></table></div>';
-  // Fila de totales
+  // Fila de totales dentro del tbody
   const tots={jd:0,ser:0,san:0};
   _rcReservas.forEach(r=>{
     const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
@@ -1233,11 +1232,11 @@ function previsualizarRecalculo(){
     const resto=neto-admon;
     tots.jd+=resto*props.jd;tots.ser+=resto*props.ser;tots.san+=resto*props.san;
   });
-  html+='<tr style="border-top:2px solid var(--border);font-weight:700;">';
-  html+='<td style="padding:6px 8px" colspan="3">TOTALES</td>';
-  if(props.jd>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(tots.jd)+'</td>';
-  if(props.ser>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(tots.ser)+'</td>';
-  if(props.san>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(tots.san)+'</td>';
+  html+='<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg);">';
+  html+='<td style="padding:8px 8px;font-size:12px" colspan="3">TOTALES</td>';
+  if(props.jd>0)html+='<td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(tots.jd)+'</td>';
+  if(props.ser>0)html+='<td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(tots.ser)+'</td>';
+  if(props.san>0)html+='<td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(tots.san)+'</td>';
   html+='<td></td></tr>';
   html+='</tbody></table></div>';
   cont.innerHTML=html;
