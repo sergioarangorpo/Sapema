@@ -1185,66 +1185,117 @@ function actualizarRcResumen(){
 let _rcReservas=[];
 
 function previsualizarRecalculo(){
+  try{
   const mes=document.getElementById('rc-mes').value;
   const anio=document.getElementById('rc-anio').value;
   const props=calcRcProps();
   const mesStr=anio+'-'+mes;
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const mesNombre=meses[parseInt(mes)-1];
-  // Usar reservas globales — todasReservas o reservas como fallback
   const fuente=(todasReservas&&todasReservas.length>0)?todasReservas:reservas;
   _rcReservas=fuente.filter(r=>r.prop==='M1'&&r.semana==='bolsa'&&r.entrada&&r.entrada.startsWith(mesStr));
   const preview=document.getElementById('rc-preview');
   const cont=document.getElementById('rc-preview-content');
   if(_rcReservas.length===0){
-    const totalFuente=(todasReservas&&todasReservas.length>0)?todasReservas.length:reservas.length;
-    cont.innerHTML='<div style="color:var(--text-3);font-size:13px;padding:8px 0">No hay reservas de bolsa M1 en '+mesNombre+' '+anio+'. ('+totalFuente+' reservas cargadas en total)</div>';
+    const totalFuente=fuente.length;
+    const ejemplos=fuente.filter(r=>r.prop==='M1').map(r=>r.semana).slice(0,5).join(', ');
+    cont.innerHTML='<div style="color:var(--text-3);font-size:13px;padding:8px 0">No hay reservas de bolsa M1 en '+mesNombre+' '+anio+'.<br>Total cargadas: '+totalFuente+'. Semanas M1 encontradas: ['+ejemplos+']</div>';
     document.getElementById('rc-aplicar-btn').style.display='none';
     preview.style.display='block';
     return;
   }
-  let html='<div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;">'+_rcReservas.length+' reserva(s) bolsa M1 en '+mesNombre+' '+anio+'</div>';
-  html+='<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;">'+props.pct+'</div>';
-  html+='<div class="table-wrap"><table style="width:100%;font-size:12px;border-collapse:collapse;">';
-  html+='<thead><tr style="color:var(--text-3);font-size:10px;text-transform:uppercase;">';
-  html+='<th style="padding:4px 8px;text-align:left">Huesped</th><th style="padding:4px 8px;text-align:left">Entrada</th><th style="padding:4px 8px;text-align:right">Bruto</th>';
-  if(props.jd>0)html+='<th style="padding:4px 8px;text-align:right">JD ('+(props.jd*100).toFixed(1)+'%)</th>';
-  if(props.ser>0)html+='<th style="padding:4px 8px;text-align:right">Sergio ('+(props.ser*100).toFixed(1)+'%)</th>';
-  if(props.san>0)html+='<th style="padding:4px 8px;text-align:right">Santiago ('+(props.san*100).toFixed(1)+'%)</th>';
-  html+='<th style="padding:4px 8px;text-align:left">Estado</th></tr></thead><tbody>';
-  _rcReservas.forEach(r=>{
+  // Calcular distribución anterior (con santi_m1 guardado) y nueva
+  function calcDistribAnterior(r){
     const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
     const admon=(r.bruto||0)*0.1;
     const resto=neto-admon;
     const sm=r.santi_m1;
-    const antes=sm==='si'?'Completo (25%)':sm==='no'?'Sin Santiago':sm&&sm.startsWith('parcial:')?'Parcial '+sm.split(':')[1]+' dia(s)':sm||'-';
-    html+='<tr style="border-top:1px solid var(--border);">';
-    html+='<td style="padding:6px 8px;font-weight:500">'+(r.huesped||'-')+'</td>';
-    html+='<td style="padding:6px 8px;color:var(--text-2)">'+r.entrada+'</td>';
-    html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace">'+fmt(r.bruto||0)+'</td>';
-    if(props.jd>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(resto*props.jd)+'</td>';
-    if(props.ser>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(resto*props.ser)+'</td>';
-    if(props.san>0)html+='<td style="padding:6px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(resto*props.san)+'</td>';
-    html+='<td style="padding:6px 8px;color:var(--text-3);font-size:11px">'+estadoHtml2(r.estado_pago)+'</td></tr>';
+    let jdA,serA,sanA;
+    if(!sm||sm==='si'){jdA=0.5;serA=0.25;sanA=0.25;}
+    else if(sm==='no'){jdA=0.5;serA=0.5;sanA=0;}
+    else if(sm.startsWith('parcial:')){
+      const d=parseInt(sm.split(':')[1])||1;
+      const t=14+7+d;jdA=14/t;serA=7/t;sanA=d/t;
+    }else{jdA=0.5;serA=0.25;sanA=0.25;}
+    return{jd:resto*jdA,ser:resto*serA,san:resto*sanA};
+  }
+
+  let html='<div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:4px;">'+_rcReservas.length+' reserva(s) bolsa M1 — '+mesNombre+' '+anio+'</div>';
+  html+='<div style="font-size:11px;color:var(--text-2);margin-bottom:12px;">Nueva distribucion: '+props.pct+'</div>';
+  html+='<div class="table-wrap"><table style="width:100%;font-size:11px;border-collapse:collapse;">';
+  html+='<thead>';
+  // Fila 1: grupos
+  html+='<tr style="background:var(--bg);">';
+  html+='<th colspan="3" style="padding:4px 8px;text-align:left;font-size:10px;color:var(--text-3);font-weight:500;text-transform:uppercase;">Reserva</th>';
+  if(props.jd>0||true)html+='<th colspan="3" style="padding:4px 8px;text-align:center;font-size:10px;color:var(--orange);font-weight:600;border-left:2px solid var(--border)">JD Bridge</th>';
+  if(props.ser>0||true)html+='<th colspan="3" style="padding:4px 8px;text-align:center;font-size:10px;color:var(--blue);font-weight:600;border-left:2px solid var(--border)">Sergio</th>';
+  if(props.san>0||true)html+='<th colspan="3" style="padding:4px 8px;text-align:center;font-size:10px;color:var(--h4);font-weight:600;border-left:2px solid var(--border)">Santiago</th>';
+  html+='</tr>';
+  // Fila 2: subcolumnas
+  html+='<tr style="color:var(--text-3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);">';
+  html+='<th style="padding:3px 8px;text-align:left">Huesped</th><th style="padding:3px 8px;text-align:left">Check in</th><th style="padding:3px 8px;text-align:right">Bruto</th>';
+  ['jd','ser','san'].forEach(()=>{
+    html+='<th style="padding:3px 6px;text-align:right;border-left:1px solid var(--border-light)">Antes</th>';
+    html+='<th style="padding:3px 6px;text-align:right">Ahora</th>';
+    html+='<th style="padding:3px 6px;text-align:right">Dif</th>';
   });
-  // Fila de totales dentro del tbody
-  const tots={jd:0,ser:0,san:0};
+  html+='</tr></thead><tbody>';
+
+  const tots={jdA:0,serA:0,sanA:0,jdN:0,serN:0,sanN:0};
   _rcReservas.forEach(r=>{
     const neto=(r.bruto||0)-(r.comision||0)-(r.comision_pasarela||0);
     const admon=(r.bruto||0)*0.1;
     const resto=neto-admon;
-    tots.jd+=resto*props.jd;tots.ser+=resto*props.ser;tots.san+=resto*props.san;
+    const ant=calcDistribAnterior(r);
+    const nvo={jd:resto*props.jd,ser:resto*props.ser,san:resto*props.san};
+    tots.jdA+=ant.jd;tots.serA+=ant.ser;tots.sanA+=ant.san;
+    tots.jdN+=nvo.jd;tots.serN+=nvo.ser;tots.sanN+=nvo.san;
+
+    function difCell(a,n){
+      const d=n-a;
+      const col=d>0?'var(--green)':d<0?'var(--red)':'var(--text-3)';
+      const sign=d>0?'+':'';
+      return '<td style="padding:5px 6px;text-align:right;font-family:DM Mono,monospace;font-size:11px;color:'+col+';font-weight:600">'+(d!==0?sign+fmt(d):'=')+'</td>';
+    }
+    function fmtCell(v,col){return '<td style="padding:5px 6px;text-align:right;font-family:DM Mono,monospace;font-size:11px;color:'+col+'">'+fmt(v)+'</td>';}
+
+    html+='<tr style="border-top:1px solid var(--border-light);">';
+    html+='<td style="padding:5px 8px;font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.huesped||'-')+'</td>';
+    html+='<td style="padding:5px 8px;color:var(--text-2)">'+r.entrada+'</td>';
+    html+='<td style="padding:5px 8px;text-align:right;font-family:DM Mono,monospace">'+fmt(r.bruto||0)+'</td>';
+    html+='<td style="border-left:2px solid var(--border)"></td>'; // spacer
+    html+=fmtCell(ant.jd,'var(--text-2)')+fmtCell(nvo.jd,'var(--orange)')+difCell(ant.jd,nvo.jd);
+    html+='<td style="border-left:2px solid var(--border)"></td>';
+    html+=fmtCell(ant.ser,'var(--text-2)')+fmtCell(nvo.ser,'var(--blue)')+difCell(ant.ser,nvo.ser);
+    html+='<td style="border-left:2px solid var(--border)"></td>';
+    html+=fmtCell(ant.san,'var(--text-2)')+fmtCell(nvo.san,'var(--h4)')+difCell(ant.san,nvo.san);
+    html+='</tr>';
   });
-  html+='<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg);">';
-  html+='<td style="padding:8px 8px;font-size:12px" colspan="3">TOTALES</td>';
-  if(props.jd>0)html+='<td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(tots.jd)+'</td>';
-  if(props.ser>0)html+='<td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(tots.ser)+'</td>';
-  if(props.san>0)html+='<td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(tots.san)+'</td>';
-  html+='<td></td></tr>';
+  // Totales calculados arriba en forEach
+  // Fila totales con comparativo
+  html+='<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg);font-size:11px;">';
+  html+='<td colspan="3" style="padding:8px 8px">TOTALES</td>';
+  html+='<td style="border-left:2px solid var(--border)"></td>';
+  html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:var(--text-2)">'+fmt(tots.jdA)+'</td>';
+  html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:var(--orange)">'+fmt(tots.jdN)+'</td>';
+  const djd=tots.jdN-tots.jdA;html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:'+(djd>=0?'var(--green)':'var(--red)')+'">'+((djd>=0?'+':'')+fmt(djd))+'</td>';
+  html+='<td style="border-left:2px solid var(--border)"></td>';
+  html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:var(--text-2)">'+fmt(tots.serA)+'</td>';
+  html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:var(--blue)">'+fmt(tots.serN)+'</td>';
+  const dser=tots.serN-tots.serA;html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:'+(dser>=0?'var(--green)':'var(--red)')+'">'+((dser>=0?'+':'')+fmt(dser))+'</td>';
+  html+='<td style="border-left:2px solid var(--border)"></td>';
+  html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:var(--text-2)">'+fmt(tots.sanA)+'</td>';
+  html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:var(--h4)">'+fmt(tots.sanN)+'</td>';
+  const dsan=tots.sanN-tots.sanA;html+='<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:'+(dsan>=0?'var(--green)':'var(--red)')+'">'+((dsan>=0?'+':'')+fmt(dsan))+'</td>';
+  html+='</tr>';
   html+='</tbody></table></div>';
   cont.innerHTML=html;
   document.getElementById('rc-aplicar-btn').style.display='inline-flex';
   preview.style.display='block';
+  }catch(err){
+    document.getElementById('rc-msg').innerHTML='<div style="color:var(--red);font-size:12px;padding:8px">Error: '+err.message+'</div>';
+    console.error('previsualizarRecalculo error:',err);
+  }
 }
 
 async function aplicarRecalculo(){
