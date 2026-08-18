@@ -731,6 +731,9 @@
     <div class="card">
       <div class="card-title"><i class="ti ti-list"></i> Historial de reservas</div>
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <input type="date" id="f-desde" onchange="renderHistorial()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;" title="Desde">
+        <input type="date" id="f-hasta" onchange="renderHistorial()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;" title="Hasta">
+        <button onclick="limpiarFiltrosFecha()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-2);">Limpiar fechas</button>
         <select id="f-prop" onchange="renderHistorial()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;">
           <option value="">Todas las propiedades</option>
           <option value="GO">GO Living</option><option value="M1">Villa M1</option>
@@ -1729,11 +1732,33 @@ function recalcLiq(){
   const items=getDistrib(rc);
   const costos=items.filter(d=>d.t==='costo'||d.t==='admon');
   const socios=items.filter(d=>d.t==='ingreso');
-  let html='<div style="margin-bottom:12px">';
+  const tieneAbono=r.abono>0;
+  let html='';
+  if(tieneAbono){
+    html+='<div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;">';
+    html+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--blue);margin-bottom:8px;">Abono ya repartido</div>';
+    html+='<div class="distrib-row"><span class="distrib-name" style="color:var(--text-3)">Abonado</span><span class="distrib-val" style="color:var(--blue)">'+fmt(r.abono)+'</span></div>';
+    if(r.abono_bold>0)html+='<div class="distrib-row"><span class="distrib-name" style="color:var(--text-3)">BOLD abono</span><span class="distrib-val val-red">-'+fmt(r.abono_bold)+'</span></div>';
+    html+='<div class="distrib-row"><span class="distrib-name" style="color:var(--text-3)">Saldo pendiente</span><span class="distrib-val val-orange">'+fmt(r.saldo_pendiente||0)+'</span></div>';
+    html+='</div>';
+    html+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--green);margin-bottom:8px;">Liquidacion final (saldo restante)</div>';
+  }
+  html+='<div style="margin-bottom:12px">';
   costos.forEach(d=>{html+=`<div class="distrib-row"><span class="distrib-name" style="color:var(--text-2)">${d.n}</span><span class="distrib-val ${d.t==='costo'?'val-red':'val-orange'}">${fmt(d.v)}</span></div>`;});
-  html+='</div><div class="distrib-highlight"><div class="distrib-highlight-title"><i class="ti ti-send"></i> Transferir a cada socio</div>';
-  socios.forEach(d=>{html+=`<div class="distrib-row"><span class="distrib-name" style="font-weight:500">${d.n}</span><span class="distrib-val val-green">${fmt(d.v)}</span></div>`;});
   html+='</div>';
+  if(tieneAbono){
+    html+='<div class="distrib-highlight"><div class="distrib-highlight-title"><i class="ti ti-send"></i> Transferir ahora (saldo pendiente)</div>';
+    const totalSocios=socios.reduce((a,d)=>a+d.v,0);
+    socios.forEach(d=>{
+      const parte=totalSocios>0?(d.v/totalSocios):0;
+      html+=`<div class="distrib-row"><span class="distrib-name" style="font-weight:500">${d.n}</span><span class="distrib-val val-green">${fmt((r.saldo_pendiente||0)*parte)}</span></div>`;
+    });
+    html+='</div>';
+  } else {
+    html+='<div class="distrib-highlight"><div class="distrib-highlight-title"><i class="ti ti-send"></i> Transferir a cada socio</div>';
+    socios.forEach(d=>{html+=`<div class="distrib-row"><span class="distrib-name" style="font-weight:500">${d.n}</span><span class="distrib-val val-green">${fmt(d.v)}</span></div>`;});
+    html+='</div>';
+  }
   document.getElementById('liq-distrib').innerHTML=html;
   window._liqData={comision,bold,feeResort,neto,socios,rc};
 }
@@ -2272,9 +2297,13 @@ function sortHistorial(col){
 
 function renderHistorial(){
   const fp=document.getElementById('f-prop').value,fe=document.getElementById('f-estado').value;
+  const fDesde=document.getElementById('f-desde')?document.getElementById('f-desde').value:'';
+  const fHasta=document.getElementById('f-hasta')?document.getElementById('f-hasta').value:'';
   let lista=reservas.filter(r=>r.estado_pago!==undefined);
   if(fp)lista=lista.filter(r=>r.prop===fp);
   if(fe)lista=lista.filter(r=>r.estado_pago===fe);
+  if(fDesde)lista=lista.filter(r=>r.entrada&&r.entrada>=fDesde);
+  if(fHasta)lista=lista.filter(r=>r.entrada&&r.entrada<=fHasta);
 
   if(sortCol){
     lista=[...lista].sort((a,b)=>{
@@ -2331,6 +2360,14 @@ function renderHistorial(){
       </tr>`+
       (r.estado_pago==='abono'&&r.abono?`<tr id="abono-row-${r.id}" style="display:none;"><td colspan="10" style="padding:0;border-top:none;"><div style="background:var(--blue-bg);border:1px solid #B8D4E8;border-radius:var(--radius-sm);margin:0 8px 8px;padding:10px 14px;font-size:12px;"><span style="color:var(--text-3)">💰 Abonado: </span><strong>${fmt(r.abono)}</strong><span style="color:var(--text-3);margin-left:16px;">⏳ Saldo pendiente: </span><strong style="color:var(--orange)">${fmt(r.saldo_pendiente||0)}</strong></div></td></tr>`:'');
     }).join('')+'</tbody></table></div>';
+}
+
+function limpiarFiltrosFecha(){
+  const d=document.getElementById('f-desde');
+  const h=document.getElementById('f-hasta');
+  if(d)d.value='';
+  if(h)h.value='';
+  renderHistorial();
 }
 
 function exportarExcel(){
