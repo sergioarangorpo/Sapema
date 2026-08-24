@@ -1702,7 +1702,7 @@ async function guardarReserva(){
 function abrirLiquidacion(id){
   const r=reservas.find(x=>x.id===id);if(!r)return;
   liquidandoId=id;liquidandoReserva=r;
-  document.getElementById('modal-liq-sub').textContent=`${PROPS[r.prop].nombre} — ${r.huesped} — ${r.entrada}`;
+  document.getElementById('modal-liq-sub').innerHTML=`${PROPS[r.prop].nombre} — ${r.huesped}<br><span style="font-size:11px;color:var(--text-3)">📅 Check in: <strong>${r.entrada||'—'}</strong> &nbsp;→&nbsp; Check out: <strong>${r.salida||'—'}</strong> &nbsp;·&nbsp; ${r.noches||0} noche(s) · ${r.personas||1} persona(s)</span>`;
   const esBooking=r.tipo==='Booking',esFeeResort=(r.prop==='M1'&&r.semana==='Nico')||(r.prop==='H4'&&r.h4_modo==='retiro');
   let html='';
   if(esBooking){const comAuto=round2((r.bruto||0)*0.18);html+=`<div class="toggle-row"><span class="toggle-label">¿Confirmar comisión Booking 18%? <strong>${fmt(comAuto)}</strong></span><label class="toggle"><input type="checkbox" id="liq-booking" checked onchange="recalcLiq()"><span class="toggle-slider"></span></label></div>`;}
@@ -2417,16 +2417,35 @@ function generarCalNaio(){
     const e=r.entrada, s=r.salida||r.entrada;
     return e<=fin && s>=inicio;
   });
-  lista=[...lista].sort((a,b)=>{
+  // Fusionar reservas cruzadas: mismo huesped + misma prop → una sola fila
+  const merged=[];
+  lista.forEach(r=>{
+    if(!r.huesped||r.huesped.startsWith('BOLSA OXO')){merged.push(r);return;}
+    const existing=merged.find(m=>m.prop===r.prop&&m.huesped===r.huesped&&
+      Math.abs(new Date(m.salida)-new Date(r.entrada))<=86400000*2);
+    if(existing){
+      // Extender la reserva existente
+      if(r.entrada<existing.entrada) existing.entrada=r.entrada;
+      if((r.salida||r.entrada)>(existing.salida||existing.entrada)) existing.salida=r.salida||r.entrada;
+      // Recalcular noches
+      const d1=new Date(existing.entrada),d2=new Date(existing.salida);
+      existing.noches=Math.round((d2-d1)/86400000);
+      existing._merged=true;
+    } else {
+      merged.push({...r});
+    }
+  });
+
+  merged.sort((a,b)=>{
     if(naioSortCol==='noches'||naioSortCol==='personas') return ((a[naioSortCol]||0)-(b[naioSortCol]||0))*naioSortDir;
     return ((a[naioSortCol]||'').localeCompare(b[naioSortCol]||''))*naioSortDir;
   });
   const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
   const th=(label,col)=>`<th style="cursor:pointer;user-select:none" onclick="sortNaio('${col}')">${label} ${naioSortCol===col?(naioSortDir===1?'↑':'↓'):'↕'}</th>`;
-  document.getElementById('naio-titulo').textContent=`Reservas ${meses[mes-1]} ${anio} — ${lista.length} reserva(s)`;
-  document.getElementById('naio-tabla').innerHTML=lista.length?
+  document.getElementById('naio-titulo').textContent=`Reservas ${meses[mes-1]} ${anio} — ${merged.length} reserva(s)`;
+  document.getElementById('naio-tabla').innerHTML=merged.length?
     '<table><thead><tr>'+th('Check In','entrada')+th('Check Out','salida')+th('Noches','noches')+th('Huésped','huesped')+th('Personas','personas')+th('Villa','prop')+'</tr></thead><tbody>'+
-    lista.map(r=>`<tr><td>${r.entrada}</td><td>${r.salida||'—'}</td><td>${r.noches||0}</td><td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td><td>${r.personas||'—'}</td><td>${nombreVilla(r.prop)}</td></tr>`).join('')+
+    merged.map(r=>`<tr${r._merged?' style="background:var(--blue-bg)"':''}><td>${r.entrada}</td><td>${r.salida||'—'}</td><td>${r.noches||0}</td><td>${(r.huesped&&r.huesped.startsWith('BOLSA OXO')?'<span style="background:#F4ECF7;color:var(--h4);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">🏨 '+r.huesped+'</span>':(r.huesped||'—'))}</td><td>${r.personas||'—'}</td><td>${nombreVilla(r.prop)}</td></tr>`).join('')+
     '</tbody></table>':
     '<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
   document.getElementById('naio-contenido').style.display='block';
