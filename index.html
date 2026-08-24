@@ -2417,19 +2417,24 @@ function generarCalNaio(){
     const e=r.entrada, s=r.salida||r.entrada;
     return e<=fin && s>=inicio;
   });
-  // Fusionar reservas cruzadas: mismo huesped + misma prop → una sola fila
+  // Fusionar reservas: mismo huesped + misma prop + fechas solapadas o contiguas
   const merged=[];
   lista.forEach(r=>{
     if(!r.huesped||r.huesped.startsWith('BOLSA OXO')){merged.push(r);return;}
-    const existing=merged.find(m=>m.prop===r.prop&&m.huesped===r.huesped&&
-      Math.abs(new Date(m.salida)-new Date(r.entrada))<=86400000*2);
+    const rE=r.entrada||'', rS=r.salida||r.entrada||'';
+    // Buscar reserva existente que se solape o toque (margen 1 dia)
+    const existing=merged.find(m=>{
+      if(m.prop!==r.prop||m.huesped!==r.huesped) return false;
+      const mE=m.entrada||'', mS=m.salida||m.entrada||'';
+      // Se solapan si la entrada de uno es <= salida del otro + 1 dia
+      return rE<=mS && rS>=mE;
+    });
     if(existing){
-      // Extender la reserva existente
-      if(r.entrada<existing.entrada) existing.entrada=r.entrada;
-      if((r.salida||r.entrada)>(existing.salida||existing.entrada)) existing.salida=r.salida||r.entrada;
-      // Recalcular noches
+      if(rE<existing.entrada) existing.entrada=rE;
+      if(rS>existing.salida) existing.salida=rS;
       const d1=new Date(existing.entrada),d2=new Date(existing.salida);
       existing.noches=Math.round((d2-d1)/86400000);
+      if(!existing.personas||r.personas>existing.personas) existing.personas=r.personas;
       existing._merged=true;
     } else {
       merged.push({...r});
