@@ -1606,7 +1606,7 @@ function getDistrib(r){
       if(hasSanti)items.push({n:'Santiago Arango ('+Math.round(sanP*100)+'%)',v:resto*sanP,t:'ingreso'});
     }
   }else if(r.prop==='L3'){
-    if(r.tipo==='Directo'){const fee=neto*0.1,resto=neto-fee,gn=r.gestor==='sergio'?'Sergio Arango':r.gestor==='alejandro'?'Alejandro Londoño':'Tercero';items=[{n:'Fee comercial → '+gn,v:fee,t:'admon'},{n:'Sergio Arango (50%)',v:resto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:resto*0.5,t:'ingreso'}];}
+    if(r.tipo==='Directo'){const fee=(r.bruto||0)*0.1,resto=neto-fee,gn=r.gestor==='sergio'?'Sergio Arango':r.gestor==='alejandro'?'Alejandro Londoño':'Tercero';items=[{n:'Fee comercial → '+gn,v:fee,t:'admon'},{n:'Sergio Arango (50%)',v:resto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:resto*0.5,t:'ingreso'}];}
     else{items=[{n:'Comisión plataforma',v:-(r.comision||0),t:'costo'},{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Sergio Arango (50%)',v:neto*0.5,t:'ingreso'},{n:'Alejandro Londoño (50%)',v:neto*0.5,t:'ingreso'}];}
   }else if(r.prop==='H4'){
     if((r.h4_modo||'hotel')==='retiro'){const admon=(r.bruto||0)*0.1,fr=r.fee_resort_historico||0,resto=neto-admon-fr;items=[{n:'Pasarela BOLD',v:-(r.comision_pasarela||0),t:'costo'},{n:'Admon Sergio (10%)',v:admon,t:'admon'},{n:'Fee resort hotel',v:-fr,t:'costo'},{n:'Juan David Bridge (50%)',v:resto*0.5,t:'ingreso'},{n:'Sergio Arango (25%)',v:resto*0.25,t:'ingreso'},{n:'Santiago Arango (25%)',v:resto*0.25,t:'ingreso'}];}
@@ -2675,17 +2675,23 @@ function renderLiquidaciones(){
   lista.forEach(r=>{
     const distrib=getDistrib(r);
     const isPending=r.estado_pago==='pendiente'||r.estado_pago==='abono';
+    const isPagado=r.estado_pago==='pagado';
+    const tienePagos=r.pago_sapema>0||r.mng_fee>0||r.pago_jdbj>0||r.pago_sar>0;
 
-    // Calcular valor por socio
+    // Para pagadas con valores guardados usar esos; si no, calcular desde getDistrib
     function valSocio(nombre){
       const match=distrib.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes(nombre.toLowerCase()));
       return match.reduce((s,d)=>s+d.v,0);
     }
+    function valSocioPagado(key){
+      if(isPagado&&tienePagos) return r[key]||0;
+      return null;
+    }
 
-    const vSergio  = valSocio('Sergio');
-    const vAlej    = r.prop==='L3'?valSocio('Alejandro'):0;
-    const vJD      = r.prop!=='L3'?valSocio('Juan David'):0;
-    const vSanti   = valSocio('Santiago');
+    const vSergio  = valSocioPagado('pago_sapema')!==null?(valSocioPagado('pago_sapema')+(r.mng_fee||0)):valSocio('Sergio');
+    const vAlej    = r.prop==='L3'?(isPagado&&tienePagos?(r.pago_jdbj||0):valSocio('Alejandro')):0;
+    const vJD      = r.prop!=='L3'?(isPagado&&tienePagos&&r.prop!=='L3'?(r.pago_jdbj||0):valSocio('Juan David')):0;
+    const vSanti   = isPagado&&tienePagos?(r.pago_sar||0):valSocio('Santiago');
     const vNico    = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
 
     tots.sergio    += vSergio;
