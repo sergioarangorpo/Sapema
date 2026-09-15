@@ -2676,23 +2676,30 @@ function renderLiquidaciones(){
     const distrib=getDistrib(r);
     const isPending=r.estado_pago==='pendiente'||r.estado_pago==='abono';
     const isPagado=r.estado_pago==='pagado';
-    const tienePagos=r.pago_sapema>0||r.mng_fee>0||r.pago_jdbj>0||r.pago_sar>0;
+    // Para pagadas: usar valores reales de Supabase; para pendientes: calcular
+    const tienePagos=isPagado&&(r.pago_sapema>0||r.mng_fee>0||r.pago_jdbj>0||r.pago_sar>0);
 
-    // Para pagadas con valores guardados usar esos; si no, calcular desde getDistrib
     function valSocio(nombre){
       const match=distrib.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes(nombre.toLowerCase()));
       return match.reduce((s,d)=>s+d.v,0);
     }
-    function valSocioPagado(key){
-      if(isPagado&&tienePagos) return r[key]||0;
-      return null;
-    }
 
-    const vSergio  = valSocioPagado('pago_sapema')!==null?(valSocioPagado('pago_sapema')+(r.mng_fee||0)):valSocio('Sergio');
-    const vAlej    = r.prop==='L3'?(isPagado&&tienePagos?(r.pago_jdbj||0):valSocio('Alejandro')):0;
-    const vJD      = r.prop!=='L3'?(isPagado&&tienePagos&&r.prop!=='L3'?(r.pago_jdbj||0):valSocio('Juan David')):0;
-    const vSanti   = isPagado&&tienePagos?(r.pago_sar||0):valSocio('Santiago');
-    const vNico    = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
+    let vSergio,vAlej,vJD,vSanti,vNico;
+    if(tienePagos){
+      // Leer valores reales guardados al liquidar
+      vSergio = (r.pago_sapema||0)+(r.mng_fee||0);
+      vAlej   = r.prop==='L3'?(r.pago_jdbj||0):0;
+      vJD     = r.prop!=='L3'?(r.pago_jdbj||0):0;
+      vSanti  = r.pago_sar||0;
+      vNico   = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
+    } else {
+      // Calcular desde getDistrib para pendientes y abonos
+      vSergio = valSocio('Sergio');
+      vAlej   = r.prop==='L3'?valSocio('Alejandro'):0;
+      vJD     = r.prop!=='L3'?valSocio('Juan David'):0;
+      vSanti  = valSocio('Santiago');
+      vNico   = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
+    }
 
     tots.sergio    += vSergio;
     tots.alejandro += vAlej;
