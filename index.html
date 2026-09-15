@@ -2176,7 +2176,7 @@ function renderChartSocios(){
     if(r.estado_pago==='no_paga') return;
     // Siempre calcular desde getDistrib para reflejar el periodo completo
     // (pagadas, pendientes y abonos)
-    getDistrib(r).filter(d=>d.t==='ingreso').forEach(d=>{
+    getDistrib(r).filter(d=>d.t==='ingreso'||d.t==='admon').forEach(d=>{
       Object.keys(socios).forEach(s=>{
         if(d.n.includes(s.split(' ')[0])&&d.n.includes(s.split(' ')[1]))socios[s]+=d.v;
       });
@@ -2685,8 +2685,8 @@ function renderLiquidaciones(){
       return match.reduce((s,d)=>s+d.v,0);
     }
 
-    // Siempre calcular desde getDistrib — tiene la lógica correcta
-    const vSergio = valSocio('Sergio');
+    // Siempre calcular desde getDistrib — Sergio incluye fee comercial (admon)
+    const vSergio = distrib.filter(d=>(d.t==='ingreso'||d.t==='admon')&&d.n.toLowerCase().includes('sergio')).reduce((s,d)=>s+d.v,0);
     const vAlej   = r.prop==='L3'?valSocio('Alejandro'):0;
     const vJD     = r.prop!=='L3'?valSocio('Juan David'):0;
     const vSanti  = valSocio('Santiago');
