@@ -1767,7 +1767,10 @@ async function confirmarPago(){
   if(!liquidandoId||!window._liqData)return;
   const{comision,bold,feeResort,neto,socios}=window._liqData;
   const pago_sapema=socios.find(s=>s.n.includes('Sergio'))?socios.find(s=>s.n.includes('Sergio')).v:0;
-  const pago_jdbj=socios.find(s=>s.n.includes('Juan David'))?socios.find(s=>s.n.includes('Juan David')).v:0;
+  // Para L3: pago_jdbj guarda el valor de Alejandro; para otras: JD Bridge
+  const pago_jdbj_raw=socios.find(s=>s.n.includes('Juan David'))?socios.find(s=>s.n.includes('Juan David')).v:0;
+  const pago_alej=socios.find(s=>s.n.includes('Alejandro'))?socios.find(s=>s.n.includes('Alejandro')).v:0;
+  const pago_jdbj=pago_alej>0?pago_alej:pago_jdbj_raw;
   const pago_sar=socios.find(s=>s.n.includes('Santiago'))?socios.find(s=>s.n.includes('Santiago')).v:0;
   const btn=document.getElementById('btn-confirmar-pago');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
@@ -2675,31 +2678,19 @@ function renderLiquidaciones(){
   lista.forEach(r=>{
     const distrib=getDistrib(r);
     const isPending=r.estado_pago==='pendiente'||r.estado_pago==='abono';
-    const isPagado=r.estado_pago==='pagado';
-    // Para pagadas: usar valores reales de Supabase; para pendientes: calcular
-    const tienePagos=isPagado&&(r.pago_sapema>0||r.mng_fee>0||r.pago_jdbj>0||r.pago_sar>0);
+
 
     function valSocio(nombre){
       const match=distrib.filter(d=>d.t==='ingreso'&&d.n.toLowerCase().includes(nombre.toLowerCase()));
       return match.reduce((s,d)=>s+d.v,0);
     }
 
-    let vSergio,vAlej,vJD,vSanti,vNico;
-    if(tienePagos){
-      // Leer valores reales guardados al liquidar
-      vSergio = (r.pago_sapema||0)+(r.mng_fee||0);
-      vAlej   = r.prop==='L3'?(r.pago_jdbj||0):0;
-      vJD     = r.prop!=='L3'?(r.pago_jdbj||0):0;
-      vSanti  = r.pago_sar||0;
-      vNico   = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
-    } else {
-      // Calcular desde getDistrib para pendientes y abonos
-      vSergio = valSocio('Sergio');
-      vAlej   = r.prop==='L3'?valSocio('Alejandro'):0;
-      vJD     = r.prop!=='L3'?valSocio('Juan David'):0;
-      vSanti  = valSocio('Santiago');
-      vNico   = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
-    }
+    // Siempre calcular desde getDistrib — tiene la lógica correcta
+    const vSergio = valSocio('Sergio');
+    const vAlej   = r.prop==='L3'?valSocio('Alejandro'):0;
+    const vJD     = r.prop!=='L3'?valSocio('Juan David'):0;
+    const vSanti  = valSocio('Santiago');
+    const vNico   = valSocio('Nicol')||valSocio('Velásquez')||valSocio('Nicolas');
 
     tots.sergio    += vSergio;
     tots.alejandro += vAlej;
