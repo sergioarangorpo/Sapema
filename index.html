@@ -254,6 +254,7 @@
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" id="btn-edit-guardar" onclick="guardarEdicion()"><i class="ti ti-check"></i> Guardar cambios</button>
         <button class="btn btn-secondary" onclick="cerrarModalEdit()">Cancelar</button>
+        <button class="btn btn-blue btn-sm" onclick="notificarNaioDesdeEdit()" title="Notificar a Naio"><i class="ti ti-send"></i> Notificar Naio</button>
       </div>
       <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid #f5c6c6" onclick="eliminarReserva()"><i class="ti ti-trash"></i> Eliminar reserva</button>
     </div>
@@ -1994,6 +1995,12 @@ async function eliminarReserva(){
     await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'DELETE'});
     cerrarModalEdit();await loadReservas();renderHistorial();
   }catch(err){showMsg('edit-msg','Error al eliminar: '+err.message,'danger');}
+}
+
+function notificarNaioDesdeEdit(){
+  const r=todasReservas.find(x=>x.id===editandoId)||reservas.find(x=>x.id===editandoId);
+  if(!r){alert('No se encontró la reserva.');return;}
+  enviarReservaNaio(r.huesped,r.entrada,r.salida,r.noches,r.prop,r.personas);
 }
 
 function cerrarModalEdit(){document.getElementById('modal-edit').classList.remove('open');editandoId=null;}
