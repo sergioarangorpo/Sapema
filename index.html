@@ -254,7 +254,7 @@
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" id="btn-edit-guardar" onclick="guardarEdicion()"><i class="ti ti-check"></i> Guardar cambios</button>
         <button class="btn btn-secondary" onclick="cerrarModalEdit()">Cancelar</button>
-        <button class="btn btn-blue btn-sm" onclick="notificarNaioDesdeEdit()" title="Notificar a Naio"><i class="ti ti-send"></i> Notificar Naio</button>
+        <button id="btn-notificar-naio" class="btn btn-blue btn-sm" onclick="notificarNaioDesdeEdit()" title="Notificar a Naio"><i class="ti ti-send"></i> Notificar Naio</button>
       </div>
       <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid #f5c6c6" onclick="eliminarReserva()"><i class="ti ti-trash"></i> Eliminar reserva</button>
     </div>
@@ -1941,6 +1941,9 @@ function abrirEdicion(id){
   document.getElementById('edit-bold').value=r.comision_pasarela||0;
   document.getElementById('edit-estado').value=r.estado_pago||'pendiente';
   window._editandoReserva=r;
+  // Mostrar botón Naio solo en M1 y L3
+  const btnNaio=document.getElementById('btn-notificar-naio');
+  if(btnNaio) btnNaio.style.display=(r.prop==='M1'||r.prop==='L3')?'':'none';
   // Mostrar panel abono si ya tiene abono
   const panelA=document.getElementById('edit-abono-panel');
   const inputA=document.getElementById('edit-abono-valor');
