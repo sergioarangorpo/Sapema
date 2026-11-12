@@ -904,13 +904,14 @@
   <div id="section-naio" class="section">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:14px;font-weight:600;">Naio — reservas y novedades</div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <select id="nx-mes" onchange="renderNaio()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
           <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
         </select>
         <select id="nx-anio" onchange="renderNaio()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
           <option>2025</option><option>2026</option><option>2027</option><option>2028</option>
         </select>
+        <button class="btn btn-primary btn-sm" onclick="correoCompletoNaio()" style="font-size:12px;"><i class="ti ti-send"></i> Enviar todo a Naio</button>
       </div>
     </div>
     <div id="nx-resumen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
@@ -3260,6 +3261,9 @@ async function cancelarReserva(){
   }catch(err){showMsg('edit-msg','Error al cancelar: '+err.message,'danger');}
 }
 
+// Estado de ordenamiento de la tabla Naio
+let _naioSort={col:'prop',dir:1}; // por defecto Villa asc, luego fecha
+
 function naioReservasMes(anio,mes){
   const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
   const fin=`${anio}-${String(mes).padStart(2,'0')}-${String(new Date(anio,mes,0).getDate()).padStart(2,'0')}`;
@@ -3278,8 +3282,31 @@ function naioReservasMes(anio,mes){
       if(!ex.naio_codigo&&r.naio_codigo)ex.naio_codigo=r.naio_codigo;
     }else merged.push({...r,salida:rS,_ids:[r.id]});
   });
-  merged.sort((a,b)=>a.entrada.localeCompare(b.entrada)||a.prop.localeCompare(b.prop));
+  // Orden: Villa primero, luego fecha (default), o lo que marque _naioSort
+  sortNaioLista(merged);
   return merged;
+}
+
+// Orden prop: L3 < M1 < H4 para coincidir con el orden visual habitual
+const _PROP_ORD={L3:1,M1:2,H4:3};
+function sortNaioLista(lista){
+  const {col,dir}=_naioSort;
+  lista.sort((a,b)=>{
+    let va,vb;
+    if(col==='prop'){
+      // Siempre como tiebreaker secundario: fecha
+      const po=(_PROP_ORD[a.prop]||9)-(_PROP_ORD[b.prop]||9);
+      if(po!==0)return po*dir;
+      return a.entrada.localeCompare(b.entrada);
+    }
+    if(col==='entrada'||col==='salida'){va=a[col]||'';vb=b[col]||'';}
+    else if(col==='noches'||col==='personas'){va=+(a[col]||0);vb=+(b[col]||0);}
+    else{va=(a[col]||'').toLowerCase();vb=(b[col]||'').toLowerCase();}
+    if(va<vb)return -1*dir;if(va>vb)return 1*dir;
+    // Tiebreaker: villa → fecha
+    const po=(_PROP_ORD[a.prop]||9)-(_PROP_ORD[b.prop]||9);
+    return po||a.entrada.localeCompare(b.entrada);
+  });
 }
 
 function naioEstadoMov(ids){
@@ -3308,13 +3335,47 @@ function renderNaio(){
   const badge=(r)=>{const e=naioEstadoMov(r._ids);if(e==='nueva')return '<span class="estado" style="background:#E8F0FE;color:#1A56B0">NUEVA · POR ENVIAR</span>';if(e==='modificada')return '<span class="estado" style="background:#FFF4E5;color:#B25E00">MODIFICADA · POR ENVIAR</span>';return r.naio_codigo?'<span class="estado" style="background:#E6F4EA;color:#1E7B34">CONFIRMADA</span>':'<span class="estado" style="background:#FFF4E5;color:#B25E00">SIN CÓDIGO</span>';};
   if(lista.length){
     const tbl=document.createElement('table');
-    tbl.innerHTML=`<thead><tr><th style="width:28px"></th><th style="width:20px"></th><th>Check in</th><th>Check out</th><th>Noches</th><th>Huésped</th><th>Pers.</th><th>Villa</th><th>Código Naio</th><th>Estado</th></tr></thead>`;
+    // Headers ordenables
+    const ths=[
+      {col:null,  label:'',        w:'28px', noSort:true},
+      {col:null,  label:'',        w:'20px', noSort:true},
+      {col:'entrada',  label:'Check in'},
+      {col:'salida',   label:'Check out'},
+      {col:'noches',   label:'Noches'},
+      {col:'huesped',  label:'Huésped'},
+      {col:'personas', label:'Pers.'},
+      {col:'prop',     label:'Villa'},
+      {col:'naio_codigo',label:'Código Naio'},
+      {col:null,  label:'Estado', noSort:true},
+    ];
+    const thHtml=ths.map(h=>{
+      if(h.noSort) return `<th${h.w?` style="width:${h.w}"`:''}>`;
+      const active=_naioSort.col===h.col;
+      const arrow=active?(_naioSort.dir===1?' ↑':' ↓'):'';
+      return `<th style="cursor:pointer;user-select:none;white-space:nowrap${active?';color:var(--accent)':''}" onclick="naioSortBy('${h.col}')">${h.label}${arrow}</th>`;
+    }).join('').replace(/<th([^>]*)>/g,'<th$1>').replace(/><\/th>/g,'></th>');
+    // Reconstruir correctamente
+    const thead=document.createElement('thead');
+    const tr0=document.createElement('tr');
+    ths.forEach(h=>{
+      const th=document.createElement('th');
+      if(h.w) th.style.width=h.w;
+      if(!h.noSort&&h.col){
+        th.style.cursor='pointer';th.style.userSelect='none';th.style.whiteSpace='nowrap';
+        const active=_naioSort.col===h.col;
+        if(active) th.style.color='var(--accent)';
+        th.textContent=h.label+(active?(_naioSort.dir===1?' ↑':' ↓'):'');
+        th.onclick=()=>naioSortBy(h.col);
+      } else { th.textContent=h.label||''; }
+      tr0.appendChild(th);
+    });
+    thead.appendChild(tr0);tbl.appendChild(thead);
     const tbody=document.createElement('tbody');tbody.id='nx-tbody';
     lista.forEach((r,i)=>{
       const tr=document.createElement('tr');
       tr.draggable=true;tr.dataset.idx=i;tr.dataset.ids=r._ids.join(',');
       tr.style.cursor='grab';
-      tr.innerHTML=`<td style="text-align:center;cursor:grab;color:var(--text-3);font-size:16px" title="Arrastrar">⠿</td><td style="text-align:center"><input type="checkbox" class="nx-chk" data-ids="${r._ids.join(',')}" data-row="${i}" onchange="actualizarBtnNaio()" style="cursor:pointer"></td><td>${fdN(r.entrada)}</td><td>${fdN(r.salida)}</td><td>${r.noches||0}</td><td>${escN(r.huesped||'—')}</td><td>${r.personas||'—'}</td><td>${r.prop}</td><td><input type="text" value="${escN(r.naio_codigo||'')}" placeholder="código" style="width:110px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Mono',monospace" onchange="guardarCodigoNaio('${r._ids.join(',')}',this.value,this)"></td><td>${badge(r)}</td>`;
+      tr.innerHTML=`<td style="text-align:center;cursor:grab;color:var(--text-3);font-size:16px" title="Arrastrar">⠿</td><td style="text-align:center"><input type="checkbox" class="nx-chk" data-ids="${r._ids.join(',')}" data-row="${i}" onchange="actualizarBtnNaio()" style="cursor:pointer"></td><td>${fdN(r.entrada)}</td><td>${fdN(r.salida)}</td><td>${r.noches||0}</td><td>${escN(r.huesped||'—')}</td><td>${r.personas||'—'}</td><td style="font-weight:600">${r.prop}</td><td><input type="text" value="${escN(r.naio_codigo||'')}" placeholder="código" style="width:110px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Mono',monospace" onchange="guardarCodigoNaio('${r._ids.join(',')}',this.value,this)"></td><td>${badge(r)}</td>`;
       tr._naioData=r;
       tbody.appendChild(tr);
     });
@@ -3388,6 +3449,49 @@ function correoSeleccionadasNaio(){
   cuerpo+='\n\nPor favor confirma los códigos pendientes cuando puedas.\n\nMuchas gracias, ¡que tengas un excelente día! 😊';
   const asunto=`*** Villas Naio — ${pend.length?'Novedades y consolidado':'Consolidado'} ${MESES_N[mes-1]} ${anio}`;
   abrirCorreoNaio(asunto,cuerpo);
+}
+
+// Botón "Enviar todo a Naio" — novedades pendientes + consolidado completo del mes
+function correoCompletoNaio(){
+  const mes=parseInt(document.getElementById('nx-mes').value);
+  const anio=parseInt(document.getElementById('nx-anio').value);
+  // Todas las reservas del mes ordenadas por villa → fecha
+  const todasFilas=naioReservasMes(anio,mes);
+  // Todas las novedades pendientes (sin filtrar por fila seleccionada)
+  const pend=naioMovs.filter(m=>!m.enviado_at);
+  const tl={alta:'ADICIÓN',cancelacion:'CANCELACIÓN',modificacion:'MODIFICACIÓN'};
+  const head='Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n'+'─'.repeat(70)+'\n';
+  const filaR=r=>`${fdN(r.entrada)}\t${fdN(r.salida)}\t${r.noches||0}\t${r.huesped||''}\t${r.personas||0}\t${r.prop}\t${r.naio_codigo||'PENDIENTE'}`;
+  let cuerpo=`Hola María, ¿cómo estás? Espero que todo esté muy bien.\n\n`;
+  cuerpo+=`Te comparto la información completa de las Villas Naio para ${MESES_N[mes-1]} ${anio}.\n\n`;
+  if(pend.length){
+    cuerpo+='📋 NOVEDADES PENDIENTES:\n\n';
+    ['cancelacion','alta','modificacion'].forEach(tipo=>{
+      const lst=pend.filter(m=>m.tipo===tipo);
+      if(!lst.length)return;
+      cuerpo+=tl[tipo]+':\n'+head+lst.map(m=>`${fdN(m.entrada)}\t${fdN(m.salida)}\t${m.noches||0}\t${m.huesped||''}\t${m.personas||0}\t${m.prop}\t${m.codigo||''}${m.detalle?'  ('+m.detalle+')':''}`).join('\n')+'\n\n';
+    });
+  }else{
+    cuerpo+='✅ Sin novedades pendientes este mes.\n\n';
+  }
+  if(todasFilas.length){
+    cuerpo+=`📅 CONSOLIDADO COMPLETO ${MESES_N[mes-1].toUpperCase()} ${anio}:\n\n`;
+    cuerpo+=head+todasFilas.map(filaR).join('\n');
+    cuerpo+='\n';
+  }
+  cuerpo+='\nPor favor confirma los códigos pendientes cuando puedas.\n\nMuchas gracias, ¡que tengas un excelente día! 😊';
+  const asunto=`*** Villas Naio — Informe completo ${MESES_N[mes-1]} ${anio}`;
+  abrirCorreoNaio(asunto,cuerpo);
+}
+
+// Ordenar tabla Naio por columna
+function naioSortBy(col){
+  if(_naioSort.col===col){
+    _naioSort.dir*=-1; // invertir dirección
+  }else{
+    _naioSort={col,dir:1};
+  }
+  renderNaio();
 }
 
 let _naiodragSrc=null;
