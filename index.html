@@ -1125,8 +1125,9 @@ let naioCanceladas=[],naioMovs=[];
 
 // ── AUTH HEADERS (se actualizan tras login) ───────────────────────────────────
 let AUTH_TOKEN=null;
-function getHeaders(){
-  const h={'Content-Type':'application/json','apikey':SUPA_KEY,'Prefer':'return=minimal'};
+function getHeaders(method){
+  const h={'Content-Type':'application/json','apikey':SUPA_KEY};
+  if(method&&method!=='GET') h['Prefer']='return=minimal';
   if(AUTH_TOKEN) h['Authorization']='Bearer '+AUTH_TOKEN;
   else h['Authorization']='Bearer '+SUPA_KEY;
   return h;
@@ -1224,7 +1225,8 @@ const PROPS={GO:{nombre:'GO Living',color:'var(--go)'},M1:{nombre:'Villa M1',col
 const TIPOS={GO:['Airbnb'],M1:['Airbnb','Booking','Directo'],L3:['Airbnb','Booking','Directo'],H4:['Hotel trimestral','Retiro directo']};
 
 async function supaFetch(path,opts={}){
-  const res=await fetch(SUPA_URL+path,{headers:getHeaders(),...opts});
+  const method=(opts.method||'GET').toUpperCase();
+  const res=await fetch(SUPA_URL+path,{headers:getHeaders(method),...opts});
   if(!res.ok){
     const txt=await res.text();
     throw new Error(txt||'Error '+res.status);
@@ -3864,7 +3866,7 @@ function renderFlujoCaja(){
   if(mes) data=data.filter(r=>r.fecha&&r.fecha.startsWith(mes));
   if(tipo) data=data.filter(r=>r.tipo===tipo);
   if(cat) data=data.filter(r=>r.categoria===cat);
-  if(buscar) data=data.filter(r=>(r.detalle||'').toLowerCase().includes(buscar)||(r.obs||'').toLowerCase().includes(buscar));
+  if(buscar) data=data.filter(r=>(r.detalle||'').toLowerCase().includes(buscar)||(r.observaciones||'').toLowerCase().includes(buscar));
 
   const tbody=document.getElementById('fc-body');
   const empty=document.getElementById('fc-empty');
@@ -3909,12 +3911,12 @@ function renderFlujoCaja(){
     const soporte=r.pasaporte_url||r.factura_url
       ?`<a href="${r.pasaporte_url||r.factura_url}" target="_blank" style="color:var(--accent);font-size:12px;"><i class="ti ti-paperclip"></i> Ver</a>`
       :'<span style="color:var(--text-3)">—</span>';
-    const siigo=r.siigo?`<span style="font-size:11px;color:var(--text-3);">${r.siigo}</span>`:'<span style="color:var(--text-3)">—</span>';
+    const siigo=r.codigo_siigo?`<span style="font-size:11px;color:var(--text-3);">${r.codigo_siigo}</span>`:'<span style="color:var(--text-3)">—</span>';
     return `<tr style="border-bottom:1px solid var(--border);transition:background .15s;" onmouseenter="this.style.background='var(--bg-2)'" onmouseleave="this.style.background=''">
       <td style="padding:10px 14px;white-space:nowrap;font-size:12px;color:var(--text-2);">${fecha}</td>
       <td style="padding:10px 14px;font-weight:500;max-width:260px;">
         <div>${r.detalle||'—'}</div>
-        ${r.obs?`<div style="font-size:11px;color:var(--text-3);margin-top:2px;">${r.obs}</div>`:''}
+        ${r.observaciones?`<div style="font-size:11px;color:var(--text-3);margin-top:2px;">${r.observaciones}</div>`:''}
       </td>
       <td style="padding:10px 14px;"><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${catBg};color:${catTxt};font-weight:600;white-space:nowrap;">${catNom}</span></td>
       <td style="padding:10px 14px;text-align:right;font-weight:700;color:#22c55e;font-size:13px;">${r.tipo==='ingreso'?fmt(r.valor):'—'}</td>
