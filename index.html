@@ -991,6 +991,118 @@
       <div id="cal-content"></div>
     </div>
   </div>
+
+  <!-- CONTABILIDAD -->
+  <div id="section-contabilidad" class="section">
+  <div class="card">
+
+    <!-- Cabecera -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:14px;font-weight:600;">Contabilidad Sapema SAS</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="exportarFlujoCaja()"><i class="ti ti-download"></i> Exportar Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalGasto()"><i class="ti ti-upload"></i> Cargar factura</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
+      <button id="ctab-flujo" onclick="switchCtab('flujo')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;">Flujo de caja</button>
+      <button id="ctab-gastos" onclick="switchCtab('gastos')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-2px;">Facturas y gastos</button>
+    </div>
+
+    <!-- ── FLUJO DE CAJA ───────────────────────────────────── -->
+    <div id="ctab-panel-flujo">
+
+      <!-- Tarjetas resumen -->
+      <div id="fc-totales" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;"></div>
+
+      <!-- Barra de filtros -->
+      <div style="padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Período</label>
+            <select id="fc-mes" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;min-width:160px;">
+              <option value="">Todos los meses</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Tipo</label>
+            <select id="fc-tipo" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+              <option value="">Todos</option>
+              <option value="ingreso">Solo ingresos</option>
+              <option value="egreso">Solo egresos</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Categoría</label>
+            <select id="fc-cat" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+              <option value="">Todas</option>
+              <option value="bold_reserva">BOLD Reserva</option>
+              <option value="admon_naio">Admon Naio</option>
+              <option value="lote_cartagena">Lote Cartagena</option>
+              <option value="honorarios">Honorarios</option>
+              <option value="transferencia_socio">Transferencia socio</option>
+              <option value="gasto">Gasto</option>
+              <option value="gasto_externo">Gasto externo</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:160px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Buscar</label>
+            <input type="text" id="fc-buscar" oninput="renderFlujoCaja()" placeholder="Nombre, detalle…" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;align-self:flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosFlujo()"><i class="ti ti-x"></i> Limpiar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:4px;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;" id="fc-tabla">
+            <thead>
+              <tr style="background:var(--bg-2);color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Fecha</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Detalle</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Categoría</th>
+                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Ingreso</th>
+                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Egreso</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Siigo</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Soporte</th>
+              </tr>
+            </thead>
+            <tbody id="fc-body"></tbody>
+          </table>
+        </div>
+        <div id="fc-empty" style="display:none;text-align:center;padding:48px;color:var(--text-3);font-size:13px;">Sin registros para este período</div>
+      </div>
+      <div id="fc-conteo" style="font-size:12px;color:var(--text-3);margin-top:8px;text-align:right;"></div>
+    </div>
+
+    <!-- ── FACTURAS Y GASTOS ───────────────────────────────── -->
+    <div id="ctab-panel-gastos" style="display:none;">
+      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:4px;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--bg-2);color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Fecha</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Establecimiento</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Categoría</th>
+                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Valor</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Factura</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="gastos-body"></tbody>
+          </table>
+        </div>
+        <div id="gastos-empty" style="display:none;text-align:center;padding:48px;color:var(--text-3);font-size:13px;">Sin facturas registradas</div>
+      </div>
+    </div>
+  </div><!-- /card -->
+  </div><!-- /section-contabilidad -->
 </div>
 
 <script>
@@ -3906,117 +4018,6 @@ const _origConfirmarPago=typeof confirmarPago==='function'?confirmarPago:null;
 })();
 </script>
 
-  <!-- CONTABILIDAD -->
-  <div id="section-contabilidad" class="section">
-  <div class="card">
-
-    <!-- Cabecera -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-      <div style="font-size:14px;font-weight:600;">Contabilidad Sapema SAS</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-secondary btn-sm" onclick="exportarFlujoCaja()"><i class="ti ti-download"></i> Exportar Excel</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalGasto()"><i class="ti ti-upload"></i> Cargar factura</button>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
-      <button id="ctab-flujo" onclick="switchCtab('flujo')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;">Flujo de caja</button>
-      <button id="ctab-gastos" onclick="switchCtab('gastos')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-2px;">Facturas y gastos</button>
-    </div>
-
-    <!-- ── FLUJO DE CAJA ───────────────────────────────────── -->
-    <div id="ctab-panel-flujo">
-
-      <!-- Tarjetas resumen -->
-      <div id="fc-totales" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;"></div>
-
-      <!-- Barra de filtros -->
-      <div style="padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;flex-direction:column;gap:3px;">
-            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Período</label>
-            <select id="fc-mes" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;min-width:160px;">
-              <option value="">Todos los meses</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:3px;">
-            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Tipo</label>
-            <select id="fc-tipo" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
-              <option value="">Todos</option>
-              <option value="ingreso">Solo ingresos</option>
-              <option value="egreso">Solo egresos</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:3px;">
-            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Categoría</label>
-            <select id="fc-cat" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
-              <option value="">Todas</option>
-              <option value="bold_reserva">BOLD Reserva</option>
-              <option value="admon_naio">Admon Naio</option>
-              <option value="lote_cartagena">Lote Cartagena</option>
-              <option value="honorarios">Honorarios</option>
-              <option value="transferencia_socio">Transferencia socio</option>
-              <option value="gasto">Gasto</option>
-              <option value="gasto_externo">Gasto externo</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:160px;">
-            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Buscar</label>
-            <input type="text" id="fc-buscar" oninput="renderFlujoCaja()" placeholder="Nombre, detalle…" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box;">
-          </div>
-          <div style="display:flex;flex-direction:column;gap:3px;align-self:flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosFlujo()"><i class="ti ti-x"></i> Limpiar</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabla -->
-      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:4px;">
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;" id="fc-tabla">
-            <thead>
-              <tr style="background:var(--bg-2);color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Fecha</th>
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Detalle</th>
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Categoría</th>
-                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Ingreso</th>
-                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Egreso</th>
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Siigo</th>
-                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Soporte</th>
-              </tr>
-            </thead>
-            <tbody id="fc-body"></tbody>
-          </table>
-        </div>
-        <div id="fc-empty" style="display:none;text-align:center;padding:48px;color:var(--text-3);font-size:13px;">Sin registros para este período</div>
-      </div>
-      <div id="fc-conteo" style="font-size:12px;color:var(--text-3);margin-top:8px;text-align:right;"></div>
-    </div>
-
-    <!-- ── FACTURAS Y GASTOS ───────────────────────────────── -->
-    <div id="ctab-panel-gastos" style="display:none;">
-      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:4px;">
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr style="background:var(--bg-2);color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Fecha</th>
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Establecimiento</th>
-                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Categoría</th>
-                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Valor</th>
-                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Factura</th>
-                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Estado</th>
-              </tr>
-            </thead>
-            <tbody id="gastos-body"></tbody>
-          </table>
-        </div>
-        <div id="gastos-empty" style="display:none;text-align:center;padding:48px;color:var(--text-3);font-size:13px;">Sin facturas registradas</div>
-      </div>
-    </div>
-  </div><!-- /card -->
-  </div><!-- /section-contabilidad -->
 
   <!-- MODAL CARGAR FACTURA -->
   <div class="modal-overlay" id="modal-gasto" style="display:none;">
