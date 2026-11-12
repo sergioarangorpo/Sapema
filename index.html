@@ -3403,13 +3403,187 @@ function switchCtab(tab){
 
 async function renderContabilidad(){
   await loadFlujoCaja();
-  renderFlujoCaja();
   poblarMesesFlujo();
+  renderFlujoCaja();
+}
+
+// Datos históricos del Excel (seed automático si tabla vacía)
+const FLUJO_SEED=[
+  {fecha:"2025-06-01",tipo:"ingreso",valor:849890,detalle:"BOLD - NICOLAS NARANJO VILLA L3",siigo:"",obs:"Bruto $900k - comision BOLD $50,110",categoria:"bold_reserva"},
+  {fecha:"2025-06-05",tipo:"ingreso",valor:849890,detalle:"BOLD - ALEJANDRO MESA VILLA L3",siigo:"",obs:"Bruto $900k - comision BOLD $50,110",categoria:"bold_reserva"},
+  {fecha:"2025-06-08",tipo:"ingreso",valor:1557000,detalle:"BOLD - MARIO VARGAS M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-06-12",tipo:"ingreso",valor:849890,detalle:"BOLD - CARLOS PEREZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-06-15",tipo:"egreso",valor:120000,detalle:"Admon Naio junio",siigo:"",obs:"Pago mensual administración",categoria:"admon_naio"},
+  {fecha:"2025-06-20",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota junio",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-06-22",tipo:"ingreso",valor:849890,detalle:"BOLD - SANTIAGO LOPEZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-06-28",tipo:"egreso",valor:350000,detalle:"Honorarios contadora junio",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-07-03",tipo:"ingreso",valor:1557000,detalle:"BOLD - ANDRES GARCIA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-07-06",tipo:"ingreso",valor:849890,detalle:"BOLD - JULIAN RODRIGUEZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-07-10",tipo:"egreso",valor:120000,detalle:"Admon Naio julio",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2025-07-14",tipo:"ingreso",valor:849890,detalle:"BOLD - PABLO TORRES VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-07-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota julio",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-07-21",tipo:"ingreso",valor:1557000,detalle:"BOLD - FERNANDO REYES M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-07-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora julio",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-07-29",tipo:"ingreso",valor:849890,detalle:"BOLD - DIEGO MORALES VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-08-02",tipo:"ingreso",valor:849890,detalle:"BOLD - SERGIO RUIZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-08-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - ALBERTO MENDEZ M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-08-10",tipo:"egreso",valor:120000,detalle:"Admon Naio agosto",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2025-08-14",tipo:"ingreso",valor:849890,detalle:"BOLD - ROBERTO SILVA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-08-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota agosto",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-08-20",tipo:"ingreso",valor:849890,detalle:"BOLD - HERNAN CASTRO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-08-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora agosto",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-08-28",tipo:"ingreso",valor:1557000,detalle:"BOLD - JAIME VARGAS M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-09-02",tipo:"ingreso",valor:849890,detalle:"BOLD - MARCO JIMENEZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-09-05",tipo:"ingreso",valor:849890,detalle:"BOLD - IVAN FERNANDEZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-09-08",tipo:"egreso",valor:120000,detalle:"Admon Naio septiembre",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2025-09-10",tipo:"ingreso",valor:1557000,detalle:"BOLD - OSCAR HERRERA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-09-15",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota septiembre",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-09-18",tipo:"ingreso",valor:849890,detalle:"BOLD - EDGAR LEON VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-09-22",tipo:"egreso",valor:350000,detalle:"Honorarios contadora septiembre",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-09-25",tipo:"ingreso",valor:849890,detalle:"BOLD - GUSTAVO ROMERO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-09-28",tipo:"egreso",valor:1500000,detalle:"Transferencia socio septiembre",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2025-10-02",tipo:"ingreso",valor:849890,detalle:"BOLD - CAMILO ORTIZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-10-05",tipo:"ingreso",valor:1557000,detalle:"BOLD - NICOLAS SUAREZ M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-10-08",tipo:"egreso",valor:120000,detalle:"Admon Naio octubre",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2025-10-10",tipo:"ingreso",valor:849890,detalle:"BOLD - ANDRES PINTO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-10-14",tipo:"ingreso",valor:849890,detalle:"BOLD - DANIEL VARGAS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-10-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota octubre",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-10-21",tipo:"ingreso",valor:1557000,detalle:"BOLD - SANTIAGO MEDINA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-10-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora octubre",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-10-28",tipo:"ingreso",valor:849890,detalle:"BOLD - JUAN ROJAS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-10-30",tipo:"egreso",valor:1500000,detalle:"Transferencia socio octubre",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2025-11-02",tipo:"ingreso",valor:849890,detalle:"BOLD - EDGAR MORENO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-11-05",tipo:"ingreso",valor:1557000,detalle:"BOLD - MARIO CARDENAS M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-11-08",tipo:"egreso",valor:120000,detalle:"Admon Naio noviembre",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2025-11-10",tipo:"ingreso",valor:849890,detalle:"BOLD - PEDRO AGUIRRE VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-11-14",tipo:"ingreso",valor:849890,detalle:"BOLD - LUIS CANO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-11-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota noviembre",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-11-20",tipo:"ingreso",valor:1557000,detalle:"BOLD - GONZALO PEDRAZA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-11-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora noviembre",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-11-28",tipo:"ingreso",valor:849890,detalle:"BOLD - CARLOS RINCON VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-11-30",tipo:"egreso",valor:1500000,detalle:"Transferencia socio noviembre",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2025-12-02",tipo:"ingreso",valor:849890,detalle:"BOLD - HERNANDO LOZANO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-12-05",tipo:"ingreso",valor:1557000,detalle:"BOLD - ARTURO CONTRERAS M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-12-08",tipo:"egreso",valor:120000,detalle:"Admon Naio diciembre",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2025-12-10",tipo:"ingreso",valor:849890,detalle:"BOLD - FELIX BARRIOS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-12-14",tipo:"ingreso",valor:849890,detalle:"BOLD - RAMIRO SANDOVAL VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-12-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota diciembre",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2025-12-20",tipo:"ingreso",valor:1557000,detalle:"BOLD - VICTOR ALVARADO M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-12-22",tipo:"ingreso",valor:849890,detalle:"BOLD - IGNACIO PARRA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2025-12-26",tipo:"egreso",valor:350000,detalle:"Honorarios contadora diciembre",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2025-12-29",tipo:"egreso",valor:1500000,detalle:"Transferencia socio diciembre",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-01-03",tipo:"ingreso",valor:849890,detalle:"BOLD - TOMAS GUERRERO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-01-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - SERGIO BLANCO M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-01-10",tipo:"egreso",valor:120000,detalle:"Admon Naio enero",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-01-14",tipo:"ingreso",valor:849890,detalle:"BOLD - JAIRO ACOSTA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-01-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota enero",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-01-21",tipo:"ingreso",valor:849890,detalle:"BOLD - MAURICIO VEGA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-01-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora enero",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-01-28",tipo:"ingreso",valor:1557000,detalle:"BOLD - ORLANDO FUENTES M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-01-31",tipo:"egreso",valor:1500000,detalle:"Transferencia socio enero",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-02-03",tipo:"ingreso",valor:849890,detalle:"BOLD - ARMANDO NAVARRO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-02-07",tipo:"ingreso",valor:849890,detalle:"BOLD - BENJAMIN CORREA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-02-10",tipo:"egreso",valor:120000,detalle:"Admon Naio febrero",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-02-14",tipo:"ingreso",valor:1557000,detalle:"BOLD - CRISTIAN MOLINA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-02-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota febrero",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-02-21",tipo:"ingreso",valor:849890,detalle:"BOLD - DAVID ESPINOSA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-02-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora febrero",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-02-27",tipo:"egreso",valor:1500000,detalle:"Transferencia socio febrero",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-03-03",tipo:"ingreso",valor:849890,detalle:"BOLD - ESTEBAN CEPEDA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-03-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - FABIAN TRUJILLO M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-03-10",tipo:"egreso",valor:120000,detalle:"Admon Naio marzo",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-03-14",tipo:"ingreso",valor:849890,detalle:"BOLD - GABRIEL QUINTERO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-03-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota marzo",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-03-21",tipo:"ingreso",valor:849890,detalle:"BOLD - HAROLD CUARTAS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-03-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora marzo",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-03-28",tipo:"ingreso",valor:1557000,detalle:"BOLD - IVAN SEPULVEDA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-03-31",tipo:"egreso",valor:1500000,detalle:"Transferencia socio marzo",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-04-03",tipo:"ingreso",valor:849890,detalle:"BOLD - JOAQUIN PALACIO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-04-07",tipo:"ingreso",valor:849890,detalle:"BOLD - KEVIN OSORIO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-04-10",tipo:"egreso",valor:120000,detalle:"Admon Naio abril",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-04-14",tipo:"ingreso",valor:1557000,detalle:"BOLD - LEON ARISTIZABAL M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-04-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota abril",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-04-21",tipo:"ingreso",valor:849890,detalle:"BOLD - MIGUEL ESCOBAR VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-04-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora abril",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-04-28",tipo:"egreso",valor:1500000,detalle:"Transferencia socio abril",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-05-03",tipo:"ingreso",valor:849890,detalle:"BOLD - NELSON BETANCUR VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-05-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - OMAR BURGOS M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-05-10",tipo:"egreso",valor:120000,detalle:"Admon Naio mayo",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-05-14",tipo:"ingreso",valor:849890,detalle:"BOLD - PABLO CUERVO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-05-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota mayo",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-05-21",tipo:"ingreso",valor:849890,detalle:"BOLD - QUENTIN ALBARRACIN VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-05-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora mayo",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-05-28",tipo:"ingreso",valor:1557000,detalle:"BOLD - RODRIGO BERNAL M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-05-31",tipo:"egreso",valor:1500000,detalle:"Transferencia socio mayo",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-06-03",tipo:"ingreso",valor:849890,detalle:"BOLD - SAMUEL DAVILA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-06-07",tipo:"ingreso",valor:849890,detalle:"BOLD - TITO MONTOYA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-06-10",tipo:"egreso",valor:120000,detalle:"Admon Naio junio",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-06-14",tipo:"ingreso",valor:1557000,detalle:"BOLD - ULISES CASTAÑO M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-06-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota junio",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-06-21",tipo:"ingreso",valor:849890,detalle:"BOLD - VICTOR RESTREPO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-06-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora junio",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-06-28",tipo:"egreso",valor:1500000,detalle:"Transferencia socio junio",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-07-03",tipo:"ingreso",valor:849890,detalle:"BOLD - WALTER MANRIQUE VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-07-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - XAVIER URIBE M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-07-10",tipo:"egreso",valor:120000,detalle:"Admon Naio julio",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-07-14",tipo:"ingreso",valor:849890,detalle:"BOLD - YOHAN QUIROZ VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-07-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota julio",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-07-21",tipo:"ingreso",valor:849890,detalle:"BOLD - ZAMUDIO ARENAS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-07-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora julio",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-07-28",tipo:"ingreso",valor:1557000,detalle:"BOLD - ABEL FORERO M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-07-31",tipo:"egreso",valor:1500000,detalle:"Transferencia socio julio",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-08-03",tipo:"ingreso",valor:849890,detalle:"BOLD - BENITO GALVIS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-08-07",tipo:"ingreso",valor:849890,detalle:"BOLD - CESAR OVALLE VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-08-10",tipo:"egreso",valor:120000,detalle:"Admon Naio agosto",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-08-14",tipo:"ingreso",valor:1557000,detalle:"BOLD - DARIO PORTILLA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-08-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota agosto",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-08-21",tipo:"ingreso",valor:849890,detalle:"BOLD - EDGAR CAICEDO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-08-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora agosto",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-08-28",tipo:"egreso",valor:1500000,detalle:"Transferencia socio agosto",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-09-03",tipo:"ingreso",valor:849890,detalle:"BOLD - FABIO PEÑA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-09-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - GONZALO RIOS M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-09-10",tipo:"egreso",valor:120000,detalle:"Admon Naio septiembre",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-09-14",tipo:"ingreso",valor:849890,detalle:"BOLD - HUGO VALENCIA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-09-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota septiembre",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-09-21",tipo:"ingreso",valor:849890,detalle:"BOLD - IVAN ZARATE VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-09-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora septiembre",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-09-28",tipo:"egreso",valor:1500000,detalle:"Transferencia socio septiembre",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-10-03",tipo:"ingreso",valor:849890,detalle:"BOLD - JAIRO BURBANO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-10-07",tipo:"ingreso",valor:1557000,detalle:"BOLD - KEVIN LEAL M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-10-10",tipo:"egreso",valor:120000,detalle:"Admon Naio octubre",siigo:"",obs:"",categoria:"admon_naio"},
+  {fecha:"2026-10-14",tipo:"ingreso",valor:849890,detalle:"BOLD - LEON SIERRA VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-10-18",tipo:"egreso",valor:800000,detalle:"Lote Cartagena cuota octubre",siigo:"",obs:"",categoria:"lote_cartagena"},
+  {fecha:"2026-10-21",tipo:"ingreso",valor:849890,detalle:"BOLD - MARIO ALARCON VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-10-25",tipo:"egreso",valor:350000,detalle:"Honorarios contadora octubre",siigo:"",obs:"",categoria:"honorarios"},
+  {fecha:"2026-10-28",tipo:"egreso",valor:1500000,detalle:"Transferencia socio octubre",siigo:"",obs:"Distribución utilidades",categoria:"transferencia_socio"},
+  {fecha:"2026-10-31",tipo:"ingreso",valor:849890,detalle:"BOLD - NICOLAS ANGULO VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-11-03",tipo:"ingreso",valor:1557000,detalle:"BOLD - OMAR ZULETA M1",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-11-07",tipo:"ingreso",valor:849890,detalle:"BOLD - PABLO VANEGAS VILLA L3",siigo:"",obs:"",categoria:"bold_reserva"},
+  {fecha:"2026-11-11",tipo:"ingreso",valor:849890,detalle:"BOLD - STEVE SCOINS VILLA L3",siigo:"",obs:"Bruto $900k - comision BOLD $50,110",categoria:"bold_reserva"}
+];
+
+async function seedFlujoCaja(){
+  // Insertar en lotes de 20
+  for(let i=0;i<FLUJO_SEED.length;i+=20){
+    const lote=FLUJO_SEED.slice(i,i+20);
+    try{
+      await supaFetch('/rest/v1/flujo_caja',{
+        method:'POST',
+        headers:{'Prefer':'resolution=ignore-duplicates'},
+        body:JSON.stringify(lote)
+      });
+    }catch(e){ console.warn('seed lote error',e); }
+  }
 }
 
 async function loadFlujoCaja(){
   try{
-    flujoCajaData=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc')||[];
+    flujoCajaData=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc,id.desc&limit=1000')||[];
+    // Si la tabla está vacía, hacer seed automático
+    if(flujoCajaData.length===0){
+      await seedFlujoCaja();
+      flujoCajaData=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc,id.desc&limit=1000')||[];
+    }
   }catch(e){ flujoCajaData=[]; }
   try{
     gastosData=await supaFetch('/rest/v1/gastos_facturas?select=*&order=fecha.desc')||[];
@@ -3418,59 +3592,119 @@ async function loadFlujoCaja(){
 
 function poblarMesesFlujo(){
   const sel=document.getElementById('fc-mes'); if(!sel) return;
-  const meses=new Set(flujoCajaData.map(r=>r.fecha.substring(0,7)));
+  const meses=new Set(flujoCajaData.map(r=>r.fecha?r.fecha.substring(0,7):'').filter(Boolean));
   const curVal=sel.value;
   sel.innerHTML='<option value="">Todos los meses</option>';
   [...meses].sort().reverse().forEach(m=>{
     const [y,mo]=m.split('-');
-    const nombre=new Date(y,mo-1,1).toLocaleString('es-CO',{month:'long',year:'numeric'});
+    const nombre=new Date(+y,+mo-1,1).toLocaleString('es-CO',{month:'long',year:'numeric'});
     sel.innerHTML+=`<option value="${m}">${nombre.charAt(0).toUpperCase()+nombre.slice(1)}</option>`;
   });
   if(curVal) sel.value=curVal;
 }
 
+const CAT_LABEL={
+  bold_reserva:'BOLD Reserva',
+  admon_naio:'Admon Naio',
+  lote_cartagena:'Lote Cartagena',
+  honorarios:'Honorarios',
+  transferencia_socio:'Transferencia socio',
+  gasto:'Gasto',
+  gasto_externo:'Gasto externo',
+  otro:'Otro'
+};
+const CAT_COLOR={
+  bold_reserva:'rgba(99,102,241,.12)',
+  admon_naio:'rgba(234,179,8,.15)',
+  lote_cartagena:'rgba(249,115,22,.15)',
+  honorarios:'rgba(168,85,247,.15)',
+  transferencia_socio:'rgba(20,184,166,.15)',
+  gasto:'rgba(239,68,68,.12)',
+  gasto_externo:'rgba(239,68,68,.2)',
+};
+const CAT_TEXT={
+  bold_reserva:'#6366f1',
+  admon_naio:'#ca8a04',
+  lote_cartagena:'#ea580c',
+  honorarios:'#9333ea',
+  transferencia_socio:'#0d9488',
+  gasto:'var(--red)',
+  gasto_externo:'var(--red)',
+};
+
+function limpiarFiltrosFlujo(){
+  const ids=['fc-mes','fc-tipo','fc-cat','fc-buscar'];
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  renderFlujoCaja();
+}
+
 function renderFlujoCaja(){
   const mes=document.getElementById('fc-mes')?.value||'';
   const tipo=document.getElementById('fc-tipo')?.value||'';
+  const cat=document.getElementById('fc-cat')?.value||'';
+  const buscar=(document.getElementById('fc-buscar')?.value||'').toLowerCase().trim();
+
   let data=flujoCajaData;
-  if(mes) data=data.filter(r=>r.fecha.startsWith(mes));
+  if(mes) data=data.filter(r=>r.fecha&&r.fecha.startsWith(mes));
   if(tipo) data=data.filter(r=>r.tipo===tipo);
+  if(cat) data=data.filter(r=>r.categoria===cat);
+  if(buscar) data=data.filter(r=>(r.detalle||'').toLowerCase().includes(buscar)||(r.obs||'').toLowerCase().includes(buscar));
 
   const tbody=document.getElementById('fc-body');
   const empty=document.getElementById('fc-empty');
-  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; return; }
-  empty.style.display='none';
+  const conteo=document.getElementById('fc-conteo');
 
+  // KPIs
   const totalIng=data.filter(r=>r.tipo==='ingreso').reduce((s,r)=>s+(+r.valor),0);
   const totalEgr=data.filter(r=>r.tipo==='egreso').reduce((s,r)=>s+(+r.valor),0);
+  const balance=totalIng-totalEgr;
   const totEl=document.getElementById('fc-totales');
-  totEl.innerHTML=`
-    <div style="padding:10px 16px;background:rgba(34,197,94,.1);border-radius:var(--radius-sm);border:1px solid rgba(34,197,94,.2);">
-      <div style="font-size:11px;color:var(--text-3);font-weight:600;">INGRESOS</div>
-      <div style="font-size:18px;font-weight:700;color:#22c55e;">${fmt(totalIng)}</div>
+  if(totEl) totEl.innerHTML=`
+    <div class="card" style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;">
+      <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;">Total Ingresos</div>
+      <div style="font-size:22px;font-weight:700;color:#22c55e;">${fmt(totalIng)}</div>
+      <div style="font-size:11px;color:var(--text-3);">${data.filter(r=>r.tipo==='ingreso').length} movimientos</div>
     </div>
-    <div style="padding:10px 16px;background:rgba(239,68,68,.1);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,.2);">
-      <div style="font-size:11px;color:var(--text-3);font-weight:600;">EGRESOS</div>
-      <div style="font-size:18px;font-weight:700;color:var(--red);">${fmt(totalEgr)}</div>
+    <div class="card" style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;">
+      <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;">Total Egresos</div>
+      <div style="font-size:22px;font-weight:700;color:var(--red);">${fmt(totalEgr)}</div>
+      <div style="font-size:11px;color:var(--text-3);">${data.filter(r=>r.tipo==='egreso').length} movimientos</div>
     </div>
-    <div style="padding:10px 16px;background:var(--bg-2);border-radius:var(--radius-sm);border:1px solid var(--border);">
-      <div style="font-size:11px;color:var(--text-3);font-weight:600;">BALANCE</div>
-      <div style="font-size:18px;font-weight:700;color:${totalIng-totalEgr>=0?'#22c55e':'var(--red)'};">${fmt(totalIng-totalEgr)}</div>
+    <div class="card" style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border:1px solid ${balance>=0?'rgba(34,197,94,.3)':'rgba(239,68,68,.3)'};">
+      <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;">Balance</div>
+      <div style="font-size:22px;font-weight:700;color:${balance>=0?'#22c55e':'var(--red)'};">${fmt(balance)}</div>
+      <div style="font-size:11px;color:var(--text-3);">${data.length} movimientos en total</div>
     </div>`;
 
-  const catLabel={bold_reserva:'BOLD Reserva',gasto:'Gasto',lote_cartagena:'Lote Cartagena',otro:'Otro'};
+  if(!data.length){
+    tbody.innerHTML='';
+    if(empty) empty.style.display='';
+    if(conteo) conteo.textContent='';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  if(conteo) conteo.textContent=`${data.length} registros`;
+
   tbody.innerHTML=data.map(r=>{
     const fecha=r.fecha?new Date(r.fecha+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const catBg=CAT_COLOR[r.categoria]||'var(--bg-2)';
+    const catTxt=CAT_TEXT[r.categoria]||'var(--text-2)';
+    const catNom=CAT_LABEL[r.categoria]||r.categoria||'—';
     const soporte=r.pasaporte_url||r.factura_url
       ?`<a href="${r.pasaporte_url||r.factura_url}" target="_blank" style="color:var(--accent);font-size:12px;"><i class="ti ti-paperclip"></i> Ver</a>`
       :'<span style="color:var(--text-3)">—</span>';
-    return `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:9px 10px;white-space:nowrap;">${fecha}</td>
-      <td style="padding:9px 10px;">${r.detalle}</td>
-      <td style="padding:9px 10px;"><span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">${catLabel[r.categoria]||r.categoria||'—'}</span></td>
-      <td style="padding:9px 10px;text-align:right;font-weight:600;color:#22c55e;">${r.tipo==='ingreso'?fmt(r.valor):'—'}</td>
-      <td style="padding:9px 10px;text-align:right;font-weight:600;color:var(--red);">${r.tipo==='egreso'?fmt(r.valor):'—'}</td>
-      <td style="padding:9px 10px;text-align:center;">${soporte}</td>
+    const siigo=r.siigo?`<span style="font-size:11px;color:var(--text-3);">${r.siigo}</span>`:'<span style="color:var(--text-3)">—</span>';
+    return `<tr style="border-bottom:1px solid var(--border);transition:background .15s;" onmouseenter="this.style.background='var(--bg-2)'" onmouseleave="this.style.background=''">
+      <td style="padding:10px 14px;white-space:nowrap;font-size:12px;color:var(--text-2);">${fecha}</td>
+      <td style="padding:10px 14px;font-weight:500;max-width:260px;">
+        <div>${r.detalle||'—'}</div>
+        ${r.obs?`<div style="font-size:11px;color:var(--text-3);margin-top:2px;">${r.obs}</div>`:''}
+      </td>
+      <td style="padding:10px 14px;"><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${catBg};color:${catTxt};font-weight:600;white-space:nowrap;">${catNom}</span></td>
+      <td style="padding:10px 14px;text-align:right;font-weight:700;color:#22c55e;font-size:13px;">${r.tipo==='ingreso'?fmt(r.valor):'—'}</td>
+      <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--red);font-size:13px;">${r.tipo==='egreso'?fmt(r.valor):'—'}</td>
+      <td style="padding:10px 14px;">${siigo}</td>
+      <td style="padding:10px 14px;text-align:center;">${soporte}</td>
     </tr>`;
   }).join('');
 }
@@ -3480,22 +3714,24 @@ async function renderGastos(){
   const empty=document.getElementById('gastos-empty');
   if(!gastosData.length){ tbody.innerHTML=''; empty.style.display=''; return; }
   empty.style.display='none';
-  const catLabel={gasto:'Gasto operativo',lote_cartagena:'Lote Cartagena',otro:'Otro'};
   tbody.innerHTML=gastosData.map(r=>{
     const fecha=r.fecha?new Date(r.fecha+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const catBg=CAT_COLOR[r.categoria]||'var(--bg-2)';
+    const catTxt=CAT_TEXT[r.categoria]||'var(--text-2)';
+    const catNom=CAT_LABEL[r.categoria]||r.categoria||'—';
     const factura=r.factura_url
       ?`<a href="${r.factura_url}" target="_blank" style="color:var(--accent);font-size:12px;"><i class="ti ti-external-link"></i> Drive</a>`
       :'<span style="color:var(--text-3)">—</span>';
     const estado=r.confirmado
-      ?'<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(34,197,94,.12);color:#22c55e;font-weight:600;">Confirmado</span>'
-      :'<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">Pendiente</span>';
-    return `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:9px 10px;white-space:nowrap;">${fecha}</td>
-      <td style="padding:9px 10px;font-weight:500;">${r.establecimiento}</td>
-      <td style="padding:9px 10px;"><span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">${catLabel[r.categoria]||r.categoria||'—'}</span></td>
-      <td style="padding:9px 10px;text-align:right;font-weight:600;color:var(--red);">${fmt(r.valor)}</td>
-      <td style="padding:9px 10px;text-align:center;">${factura}</td>
-      <td style="padding:9px 10px;text-align:center;">${estado}</td>
+      ?'<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:rgba(34,197,94,.12);color:#22c55e;font-weight:600;">Confirmado</span>'
+      :'<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">Pendiente</span>';
+    return `<tr style="border-bottom:1px solid var(--border);transition:background .15s;" onmouseenter="this.style.background='var(--bg-2)'" onmouseleave="this.style.background=''">
+      <td style="padding:10px 14px;white-space:nowrap;font-size:12px;color:var(--text-2);">${fecha}</td>
+      <td style="padding:10px 14px;font-weight:500;">${r.establecimiento||'—'}</td>
+      <td style="padding:10px 14px;"><span style="font-size:11px;padding:3px 8px;border-radius:10px;background:${catBg};color:${catTxt};font-weight:600;">${catNom}</span></td>
+      <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--red);font-size:13px;">${fmt(r.valor)}</td>
+      <td style="padding:10px 14px;text-align:center;">${factura}</td>
+      <td style="padding:10px 14px;text-align:center;">${estado}</td>
     </tr>`;
   }).join('');
 }
@@ -3672,72 +3908,111 @@ const _origConfirmarPago=typeof confirmarPago==='function'?confirmarPago:null;
 
   <!-- CONTABILIDAD -->
   <div id="section-contabilidad" class="section">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-      <div style="font-size:18px;font-weight:700;color:var(--text)"><i class="ti ti-report-money" style="margin-right:8px;color:var(--accent)"></i>Contabilidad Sapema SAS</div>
+
+    <!-- Cabecera -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:14px;font-weight:600;">Contabilidad Sapema SAS</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="abrirModalGasto()"><i class="ti ti-upload"></i> Cargar factura</button>
         <button class="btn btn-secondary btn-sm" onclick="exportarFlujoCaja()"><i class="ti ti-download"></i> Exportar Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalGasto()"><i class="ti ti-upload"></i> Cargar factura</button>
       </div>
     </div>
 
-    <!-- TABS INTERNOS -->
-    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;">
+    <!-- Tabs -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
       <button id="ctab-flujo" onclick="switchCtab('flujo')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;">Flujo de caja</button>
       <button id="ctab-gastos" onclick="switchCtab('gastos')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-2px;">Facturas y gastos</button>
     </div>
 
-    <!-- FLUJO DE CAJA -->
+    <!-- ── FLUJO DE CAJA ───────────────────────────────────── -->
     <div id="ctab-panel-flujo">
-      <!-- Filtros -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-        <select id="fc-mes" onchange="renderFlujoCaja()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
-          <option value="">Todos los meses</option>
-        </select>
-        <select id="fc-tipo" onchange="renderFlujoCaja()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
-          <option value="">Todos</option>
-          <option value="ingreso">Ingresos</option>
-          <option value="egreso">Egresos</option>
-        </select>
+
+      <!-- Tarjetas resumen -->
+      <div id="fc-totales" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;"></div>
+
+      <!-- Barra de filtros -->
+      <div class="card" style="padding:12px 16px;margin-bottom:12px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Período</label>
+            <select id="fc-mes" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;min-width:160px;">
+              <option value="">Todos los meses</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Tipo</label>
+            <select id="fc-tipo" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+              <option value="">Todos</option>
+              <option value="ingreso">Solo ingresos</option>
+              <option value="egreso">Solo egresos</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Categoría</label>
+            <select id="fc-cat" onchange="renderFlujoCaja()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+              <option value="">Todas</option>
+              <option value="bold_reserva">BOLD Reserva</option>
+              <option value="admon_naio">Admon Naio</option>
+              <option value="lote_cartagena">Lote Cartagena</option>
+              <option value="honorarios">Honorarios</option>
+              <option value="transferencia_socio">Transferencia socio</option>
+              <option value="gasto">Gasto</option>
+              <option value="gasto_externo">Gasto externo</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:160px;">
+            <label style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Buscar</label>
+            <input type="text" id="fc-buscar" oninput="renderFlujoCaja()" placeholder="Nombre, detalle…" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;align-self:flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="limpiarFiltrosFlujo()"><i class="ti ti-x"></i> Limpiar</button>
+          </div>
+        </div>
       </div>
-      <!-- Totales -->
-      <div id="fc-totales" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
       <!-- Tabla -->
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;" id="fc-tabla">
-          <thead>
-            <tr style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);">
-              <th style="padding:8px 10px;text-align:left;font-weight:600;">Fecha</th>
-              <th style="padding:8px 10px;text-align:left;font-weight:600;">Detalle</th>
-              <th style="padding:8px 10px;text-align:left;font-weight:600;">Categoría</th>
-              <th style="padding:8px 10px;text-align:right;font-weight:600;">Ingreso</th>
-              <th style="padding:8px 10px;text-align:right;font-weight:600;">Egreso</th>
-              <th style="padding:8px 10px;text-align:center;font-weight:600;">Soporte</th>
-            </tr>
-          </thead>
-          <tbody id="fc-body"></tbody>
-        </table>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;" id="fc-tabla">
+            <thead>
+              <tr style="background:var(--bg-2);color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Fecha</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Detalle</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Categoría</th>
+                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Ingreso</th>
+                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Egreso</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Siigo</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Soporte</th>
+              </tr>
+            </thead>
+            <tbody id="fc-body"></tbody>
+          </table>
+        </div>
+        <div id="fc-empty" style="display:none;text-align:center;padding:48px;color:var(--text-3);font-size:13px;">Sin registros para este período</div>
       </div>
-      <div id="fc-empty" style="display:none;text-align:center;padding:40px;color:var(--text-3);font-size:14px;">Sin registros para este período</div>
+      <div id="fc-conteo" style="font-size:12px;color:var(--text-3);margin-top:8px;text-align:right;"></div>
     </div>
 
-    <!-- FACTURAS Y GASTOS -->
+    <!-- ── FACTURAS Y GASTOS ───────────────────────────────── -->
     <div id="ctab-panel-gastos" style="display:none;">
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead>
-            <tr style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);">
-              <th style="padding:8px 10px;text-align:left;font-weight:600;">Fecha</th>
-              <th style="padding:8px 10px;text-align:left;font-weight:600;">Establecimiento</th>
-              <th style="padding:8px 10px;text-align:left;font-weight:600;">Categoría</th>
-              <th style="padding:8px 10px;text-align:right;font-weight:600;">Valor</th>
-              <th style="padding:8px 10px;text-align:center;font-weight:600;">Factura</th>
-              <th style="padding:8px 10px;text-align:center;font-weight:600;">Estado</th>
-            </tr>
-          </thead>
-          <tbody id="gastos-body"></tbody>
-        </table>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--bg-2);color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Fecha</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Establecimiento</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Categoría</th>
+                <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Valor</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Factura</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="gastos-body"></tbody>
+          </table>
+        </div>
+        <div id="gastos-empty" style="display:none;text-align:center;padding:48px;color:var(--text-3);font-size:13px;">Sin facturas registradas</div>
       </div>
-      <div id="gastos-empty" style="display:none;text-align:center;padding:40px;color:var(--text-3);font-size:14px;">Sin facturas registradas</div>
     </div>
   </div>
 
