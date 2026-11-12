@@ -924,11 +924,13 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
         <div id="nx-titulo" style="font-size:13px;font-weight:600">Reservas del mes</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text-2)"><input type="checkbox" id="nx-check-all" onchange="toggleAllNaio(this.checked)" style="cursor:pointer"> Todas</label>
           <button class="btn btn-secondary btn-sm" onclick="copiarConsolidadoNaio()"><i class="ti ti-copy"></i> Copiar consolidado</button>
-          <button class="btn btn-blue btn-sm" onclick="correoConsolidadoNaio()"><i class="ti ti-send"></i> Correo consolidado</button>
+          <button class="btn btn-blue btn-sm" id="nx-btn-notificar" onclick="correoSeleccionadasNaio()"><i class="ti ti-send"></i> Notificar Naio</button>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:8px"><i class="ti ti-drag-drop" style="font-size:11px"></i> Arrastra las filas para reordenar · Selecciona reservas con el checkbox para incluirlas en el correo a María</div>
       <div id="nx-tabla" style="overflow-x:auto"></div>
     </div>
     <div class="card">
@@ -3149,7 +3151,8 @@ async function cancelarReserva(){
 function naioReservasMes(anio,mes){
   const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
   const fin=`${anio}-${String(mes).padStart(2,'0')}-${String(new Date(anio,mes,0).getDate()).padStart(2,'0')}`;
-  const base=todasReservas.filter(r=>['M1','L3','H4'].includes(r.prop)&&r.entrada&&!(r.huesped||'').startsWith('BOLSA OXO')&&r.entrada<=fin&&(r.salida||r.entrada)>=inicio);
+  // Filtro por CHECK-IN: una reserva con check-in 31 oct va en octubre, no noviembre
+  const base=todasReservas.filter(r=>['M1','L3','H4'].includes(r.prop)&&r.entrada&&!(r.huesped||'').startsWith('BOLSA OXO')&&r.entrada>=inicio&&r.entrada<=fin);
   const merged=[];
   base.forEach(r=>{
     const rE=r.entrada,rS=r.salida||r.entrada;
@@ -3189,9 +3192,27 @@ function renderNaio(){
   const chip=(t,bg,c)=>`<span style="background:${bg};color:${c};padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600">${t}</span>`;
   document.getElementById('nx-resumen').innerHTML=chip(lista.length+' reservas','#EEE','#333')+chip(conCod+' con código','#E6F4EA','#1E7B34')+chip(sinCod+' sin código','#FFF4E5','#B25E00')+chip(canc.length+' canceladas','#FDECEA','#B3261E')+chip(pend.length+' novedades por enviar','#E8F0FE','#1A56B0');
   document.getElementById('nx-titulo').textContent='Reservas '+MESES_N[mes-1]+' '+anio+' — '+lista.length;
-  // Tabla
+  // Tabla con checkboxes y drag & drop
   const badge=(r)=>{const e=naioEstadoMov(r._ids);if(e==='nueva')return '<span class="estado" style="background:#E8F0FE;color:#1A56B0">NUEVA · POR ENVIAR</span>';if(e==='modificada')return '<span class="estado" style="background:#FFF4E5;color:#B25E00">MODIFICADA · POR ENVIAR</span>';return r.naio_codigo?'<span class="estado" style="background:#E6F4EA;color:#1E7B34">CONFIRMADA</span>':'<span class="estado" style="background:#FFF4E5;color:#B25E00">SIN CÓDIGO</span>';};
-  document.getElementById('nx-tabla').innerHTML=lista.length?'<table><thead><tr><th>Check in</th><th>Check out</th><th>Noches</th><th>Huésped</th><th>Pers.</th><th>Villa</th><th>Código Naio</th><th>Estado</th></tr></thead><tbody>'+lista.map(r=>`<tr><td>${fdN(r.entrada)}</td><td>${fdN(r.salida)}</td><td>${r.noches||0}</td><td>${escN(r.huesped||'—')}</td><td>${r.personas||'—'}</td><td>${r.prop}</td><td><input type="text" value="${escN(r.naio_codigo||'')}" placeholder="código" style="width:110px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Mono',monospace" onchange="guardarCodigoNaio('${r._ids.join(',')}',this.value,this)"></td><td>${badge(r)}</td></tr>`).join('')+'</tbody></table>':'<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
+  if(lista.length){
+    const tbl=document.createElement('table');
+    tbl.innerHTML=`<thead><tr><th style="width:28px"></th><th style="width:20px"></th><th>Check in</th><th>Check out</th><th>Noches</th><th>Huésped</th><th>Pers.</th><th>Villa</th><th>Código Naio</th><th>Estado</th></tr></thead>`;
+    const tbody=document.createElement('tbody');tbody.id='nx-tbody';
+    lista.forEach((r,i)=>{
+      const tr=document.createElement('tr');
+      tr.draggable=true;tr.dataset.idx=i;tr.dataset.ids=r._ids.join(',');
+      tr.style.cursor='grab';
+      tr.innerHTML=`<td style="text-align:center;cursor:grab;color:var(--text-3);font-size:16px" title="Arrastrar">⠿</td><td style="text-align:center"><input type="checkbox" class="nx-chk" data-ids="${r._ids.join(',')}" data-row="${i}" onchange="actualizarBtnNaio()" style="cursor:pointer"></td><td>${fdN(r.entrada)}</td><td>${fdN(r.salida)}</td><td>${r.noches||0}</td><td>${escN(r.huesped||'—')}</td><td>${r.personas||'—'}</td><td>${r.prop}</td><td><input type="text" value="${escN(r.naio_codigo||'')}" placeholder="código" style="width:110px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Mono',monospace" onchange="guardarCodigoNaio('${r._ids.join(',')}',this.value,this)"></td><td>${badge(r)}</td>`;
+      tr._naioData=r;
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody);
+    const wrap=document.getElementById('nx-tabla');wrap.innerHTML='';wrap.appendChild(tbl);
+    initNaioDragDrop(tbody);
+  }else{
+    document.getElementById('nx-tabla').innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
+  }
+  actualizarBtnNaio();
   // Pendientes
   const tl={alta:'ADICIÓN',cancelacion:'CANCELACIÓN',modificacion:'MODIFICACIÓN'};
   document.getElementById('nx-pendientes').innerHTML=pend.length?'<table><thead><tr><th>Tipo</th><th>Check in</th><th>Check out</th><th>Huésped</th><th>Villa</th><th>Código</th><th></th></tr></thead><tbody>'+pend.map(m=>`<tr><td><strong>${tl[m.tipo]||m.tipo}</strong></td><td>${fdN(m.entrada)}</td><td>${fdN(m.salida)}</td><td>${escN(m.huesped)}</td><td>${m.prop}</td><td>${escN(m.codigo||'')}</td><td style="white-space:nowrap"><button class="btn btn-secondary btn-sm" onclick="enviarMovNaioAhora('${m.id}')"><i class="ti ti-send"></i> Solo esta</button> <button class="btn btn-secondary btn-sm" onclick="descartarMovNaio('${m.id}')" title="Descartar"><i class="ti ti-x"></i></button></td></tr>`).join('')+'</tbody></table>':'<div style="color:var(--text-3);font-size:12px;padding:6px 0">No hay novedades pendientes. Todo lo enviado a Naio está al día.</div>';
@@ -3201,6 +3222,94 @@ function renderNaio(){
   // Historia
   const hist=naioMovs.filter(m=>m.entrada&&m.entrada<=fin&&(m.salida||m.entrada)>=inicio);
   document.getElementById('nx-historia').innerHTML=hist.length?'<table><thead><tr><th>Registrado</th><th>Movimiento</th><th>Huésped</th><th>Villa</th><th>Fechas</th><th>Enviado</th></tr></thead><tbody>'+hist.map(m=>`<tr><td>${fdN((m.created_at||'').slice(0,10))}</td><td>${tl[m.tipo]||m.tipo}</td><td>${escN(m.huesped)}</td><td>${m.prop}</td><td>${fdN(m.entrada)} → ${fdN(m.salida)}${m.detalle?'<br><span style="font-size:11px;color:var(--text-3)">'+escN(m.detalle)+'</span>':''}</td><td>${m.enviado_at?fdN(m.enviado_at.slice(0,10)):'<span style="color:#B25E00;font-weight:600">Pendiente</span>'}</td></tr>`).join('')+'</tbody></table>':'<div style="color:var(--text-3);font-size:12px">Aún no hay movimientos registrados este mes. Se registran desde ahora en adelante.</div>';
+}
+
+function actualizarBtnNaio(){
+  const chks=document.querySelectorAll('.nx-chk:checked');
+  const btn=document.getElementById('nx-btn-notificar');
+  const all=document.getElementById('nx-check-all');
+  const total=document.querySelectorAll('.nx-chk').length;
+  if(btn) btn.textContent=chks.length?`✉ Notificar Naio (${chks.length})`:'✉ Notificar Naio';
+  if(all) all.indeterminate=chks.length>0&&chks.length<total;
+  if(all&&chks.length===total&&total>0) all.checked=true;
+  else if(all&&chks.length===0) all.checked=false;
+}
+function toggleAllNaio(checked){
+  document.querySelectorAll('.nx-chk').forEach(c=>c.checked=checked);
+  actualizarBtnNaio();
+}
+
+function getFilasNaioSeleccionadas(){
+  const chks=[...document.querySelectorAll('.nx-chk:checked')];
+  if(!chks.length){
+    // si no hay seleccionadas, usar todas las filas en el orden actual
+    return [...document.querySelectorAll('#nx-tbody tr')].map(tr=>tr._naioData).filter(Boolean);
+  }
+  return chks.map(c=>{
+    const tr=c.closest('tr');return tr?tr._naioData:null;
+  }).filter(Boolean);
+}
+
+function correoSeleccionadasNaio(){
+  const mes=parseInt(document.getElementById('nx-mes').value);
+  const anio=parseInt(document.getElementById('nx-anio').value);
+  const filas=getFilasNaioSeleccionadas();
+  if(!filas.length){toastNaio('No hay reservas para enviar');return;}
+  const seleccionadas=new Set(document.querySelectorAll('.nx-chk:checked').length>0?[...document.querySelectorAll('.nx-chk:checked')].map(c=>c.dataset.ids):null);
+  const soloNovedades=seleccionadas.size>0;
+  const pend=naioMovs.filter(m=>!m.enviado_at&&filas.some(r=>r._ids.includes(m.reserva_id)));
+  const head='Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n'+'─'.repeat(70)+'\n';
+  const filaR=r=>`${fdN(r.entrada)}\t${fdN(r.salida)}\t${r.noches||0}\t${r.huesped||''}\t${r.personas||0}\t${r.prop}\t${r.naio_codigo||'PENDIENTE'}`;
+  let cuerpo=`Hola María, ¿cómo estás? Espero que todo esté muy bien.\n\n`;
+  cuerpo+=`Te comparto la actualización de reservas de las Villas Naio para ${MESES_N[mes-1]} ${anio}.\n\n`;
+  if(pend.length){
+    cuerpo+='📋 NOVEDADES DEL MES:\n\n';
+    const tl={alta:'ADICIÓN',cancelacion:'CANCELACIÓN',modificacion:'MODIFICACIÓN'};
+    ['cancelacion','alta','modificacion'].forEach(tipo=>{
+      const lst=pend.filter(m=>m.tipo===tipo);
+      if(!lst.length)return;
+      cuerpo+=tl[tipo]+':\n'+head+lst.map(m=>`${fdN(m.entrada)}\t${fdN(m.salida)}\t${m.noches||0}\t${m.huesped||''}\t${m.personas||0}\t${m.prop}\t${m.codigo||''}${m.detalle?'  ('+m.detalle+')':''}`).join('\n')+'\n\n';
+    });
+  }
+  cuerpo+=`📅 CONSOLIDADO ${MESES_N[mes-1].toUpperCase()} ${anio}:\n\n`;
+  cuerpo+=head+filas.map(filaR).join('\n');
+  cuerpo+='\n\nPor favor confirma los códigos pendientes cuando puedas.\n\nMuchas gracias, ¡que tengas un excelente día! 😊';
+  const asunto=`*** Villas Naio — ${pend.length?'Novedades y consolidado':'Consolidado'} ${MESES_N[mes-1]} ${anio}`;
+  abrirCorreoNaio(asunto,cuerpo);
+}
+
+let _naiodragSrc=null;
+function initNaioDragDrop(tbody){
+  tbody.addEventListener('dragstart',e=>{
+    const tr=e.target.closest('tr');if(!tr)return;
+    _naiodragSrc=tr;tr.style.opacity='0.5';
+    e.dataTransfer.effectAllowed='move';
+  });
+  tbody.addEventListener('dragend',e=>{
+    const tr=e.target.closest('tr');if(tr)tr.style.opacity='';
+    _naiodragSrc=null;
+    tbody.querySelectorAll('tr').forEach(r=>r.style.outline='');
+  });
+  tbody.addEventListener('dragover',e=>{
+    e.preventDefault();e.dataTransfer.dropEffect='move';
+    const tr=e.target.closest('tr');
+    tbody.querySelectorAll('tr').forEach(r=>r.style.outline='');
+    if(tr&&tr!==_naiodragSrc)tr.style.outline='2px solid var(--accent)';
+  });
+  tbody.addEventListener('dragleave',e=>{
+    const tr=e.target.closest('tr');if(tr)tr.style.outline='';
+  });
+  tbody.addEventListener('drop',e=>{
+    e.preventDefault();
+    const tr=e.target.closest('tr');
+    if(!tr||!_naiodragSrc||tr===_naiodragSrc)return;
+    tr.style.outline='';_naiodragSrc.style.opacity='';
+    const rect=tr.getBoundingClientRect();
+    const after=e.clientY>rect.top+rect.height/2;
+    if(after)tbody.insertBefore(_naiodragSrc,tr.nextSibling);
+    else tbody.insertBefore(_naiodragSrc,tr);
+    _naiodragSrc=null;
+  });
 }
 
 async function guardarCodigoNaio(idsStr,val,inp){
