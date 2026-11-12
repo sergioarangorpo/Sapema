@@ -256,7 +256,10 @@
         <button class="btn btn-secondary" onclick="cerrarModalEdit()">Cancelar</button>
         <button id="btn-notificar-naio" class="btn btn-blue btn-sm" onclick="notificarNaioDesdeEdit()" title="Notificar a Naio"><i class="ti ti-send"></i> Notificar Naio</button>
       </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="background:#FFF4E5;color:#B25E00;border:1px solid #F5D9A8" onclick="cancelarReserva()"><i class="ti ti-ban"></i> Cancelar reserva</button>
       <button class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid #f5c6c6" onclick="eliminarReserva()"><i class="ti ti-trash"></i> Eliminar reserva</button>
+      </div>
     </div>
     <div id="edit-msg" style="display:none"></div>
   </div>
@@ -291,6 +294,7 @@
     <button class="nav-btn" onclick="showSection('reportes',this)"><i class="ti ti-file-text"></i> Reportes</button>
     <button class="nav-btn" onclick="showSection('calendario',this)"><i class="ti ti-calendar"></i> Disponibilidad</button>
     <button class="nav-btn" onclick="showSection('semanas',this)"><i class="ti ti-calendar-week"></i> Semanas M1</button>
+    <button class="nav-btn" onclick="showSection('naio',this)" id="nav-naio"><i class="ti ti-building"></i> Naio</button>
     <button class="nav-btn" onclick="showSection('liquidaciones',this)"><i class="ti ti-receipt"></i> Liquidaciones</button>
   </div>
 
@@ -582,6 +586,10 @@
           <input type="text" id="r-comision-display" readonly placeholder="Se calcula automático">
           <input type="hidden" id="r-comision">
         </div>
+      </div>
+      <div id="x-bold" class="form-grid">
+        <div class="form-group"><label>Comisión BOLD (COP, opcional)</label><input type="number" id="r-bold" placeholder="0" oninput="calcDistrib()"><div style="font-size:11px;color:var(--text-3);margin-top:4px">Si el huésped ya pagó con tarjeta BOLD, ingrésala aquí. Luego liquida en Historial.</div></div>
+        <div class="form-group"></div>
       </div>
       <div id="x-go" style="display:none">
         <div class="form-grid">
@@ -891,6 +899,48 @@
   </div>
 
   <!-- DISPONIBILIDAD -->
+  <!-- NAIO -->
+  <div id="section-naio" class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;font-weight:600;">Naio — reservas y novedades</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="nx-mes" onchange="renderNaio()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+        <select id="nx-anio" onchange="renderNaio()" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option>2025</option><option>2026</option><option>2027</option><option>2028</option>
+        </select>
+      </div>
+    </div>
+    <div id="nx-resumen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600">Novedades por enviar</div>
+        <div id="nx-pend-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+      <div id="nx-pendientes"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div id="nx-titulo" style="font-size:13px;font-weight:600">Reservas del mes</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="copiarConsolidadoNaio()"><i class="ti ti-copy"></i> Copiar consolidado</button>
+          <button class="btn btn-blue btn-sm" onclick="correoConsolidadoNaio()"><i class="ti ti-send"></i> Correo consolidado</button>
+        </div>
+      </div>
+      <div id="nx-tabla" style="overflow-x:auto"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Canceladas del mes</div>
+      <div id="nx-canceladas" style="overflow-x:auto"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Historia del mes (movimientos)</div>
+      <div id="nx-historia" style="overflow-x:auto"></div>
+    </div>
+    <div id="nx-toast" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:9999"></div>
+  </div>
+
   <div id="section-calendario" class="section">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:14px;font-weight:600;">Disponibilidad de villas</div>
@@ -954,6 +1004,7 @@ const ROLES={
 };
 let currentUser=null; // {email, nombre, rol, props}
 let todasReservas=[]; // sin filtro de rol, para calendario
+let naioCanceladas=[],naioMovs=[];
 
 // ── AUTH HEADERS (se actualizan tras login) ───────────────────────────────────
 let AUTH_TOKEN=null;
@@ -1012,6 +1063,7 @@ function applyRoleUI(){
   // Ocultar pestaña Socios si no es admin
   const btnSocios=document.querySelector('[onclick*=socios]');
   if(btnSocios)btnSocios.style.display=esAdmin?'':'none';
+  const btnNaioNav=document.getElementById('nav-naio');if(btnNaioNav)btnNaioNav.style.display=esAdmin?'':'none';
   // Filtrar propiedades en el selector de nueva reserva
   const selProp=document.getElementById('r-prop');
   if(selProp){
@@ -1058,8 +1110,11 @@ async function supaFetch(path,opts={}){
 async function loadReservas(){
   try{
     const todas=await supaFetch('/rest/v1/reservas?select=*&order=entrada.desc');
-    todasReservas=todas||[]; // sin filtro, para calendario
+    const todasRaw=todas||[];
+    naioCanceladas=todasRaw.filter(r=>r.cancelada);
+    todasReservas=todasRaw.filter(r=>!r.cancelada); // sin filtro de rol, para calendario
     reservas=filtrarPorRol(todasReservas);
+    try{naioMovs=(await supaFetch('/rest/v1/naio_movimientos?select=*&order=created_at.asc'))||[];}catch(e2){naioMovs=[];}
     document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-ok"><i class="ti ti-circle-check"></i> Conectado — Sapema</div>';
     renderDashboard();
   }catch(e){document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-err"><i class="ti ti-alert-circle"></i> Sin conexión</div>';}
@@ -1081,6 +1136,7 @@ function showSection(id,btn){
   if(id==='reportes')initReporte();
   if(id==='calendario'){initCalendario();renderDisponibilidad();}
   if(id==='liquidaciones')renderLiquidaciones();
+  if(id==='naio')renderNaio();
   if(id==='reservas'){setTimeout(actualizarRcResumen,100);}
 }
 
@@ -1572,9 +1628,10 @@ function calcDistrib(){
   const h4_modo=p==='H4'?document.getElementById('r-h4-modo').value:'';
   let feeResort=0;
   if((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')){feeResort=getFeeResort();document.getElementById('r-fee-val').value=fmt(feeResort);}
-  const neto=bruto-comision;
+  const boldIn=parseFloat((document.getElementById('r-bold')||{}).value)||0;
+  const neto=bruto-comision-boldIn;
   if(p==='L3'&&tipo==='Directo')document.getElementById('r-fee-comercial').value=fmt(neto*0.1);
-  const r={prop:p,tipo,bruto,comision,comision_pasarela:0,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches:getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value),aseo:p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0,semana,santi_m1:(()=>{
+  const r={prop:p,tipo,bruto,comision,comision_pasarela:boldIn,neto,personas:parseInt(document.getElementById('r-personas').value)||1,noches:getNights(document.getElementById('r-entrada').value,document.getElementById('r-salida').value),aseo:p==='GO'?(parseFloat(document.getElementById('r-aseo').value)||0):0,semana,santi_m1:(()=>{
       if(p!=='M1') return '';
       const v=document.getElementById('r-santi-m1').value;
       if(v==='parcial'){const d=parseInt(document.getElementById('r-santi-dias').value)||1;return 'parcial:'+d;}
@@ -1674,16 +1731,19 @@ async function guardarReserva(){
   const santi_h4=p==='H4'?document.getElementById('r-santi-h4').value:null;
   const h4_modo=p==='H4'?document.getElementById('r-h4-modo').value:null;
   const gestor=p==='L3'&&t==='Directo'?(document.getElementById('r-gestor')||{}).value:null;
-  const neto=round2(bruto-comision);
+  const boldVal=(esUsoSocio||esBolsaH4_v)?0:(parseFloat((document.getElementById('r-bold')||{}).value)||0);
+  const neto=round2(bruto-comision-boldVal);
   let feeResort=0;
   if(!esUsoSocio&&((p==='M1'&&semana==='Nico')||(p==='H4'&&h4_modo==='retiro')))feeResort=getFeeResort();
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
+  window._nuevoId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():undefined;
+  let movId=null;
   try{
     await supaFetch('/rest/v1/reservas',{method:'POST',body:(()=>{
       const esBolsaH4=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
       const trimestre=esBolsaH4?(document.getElementById('r-h4-trimestre').value+'-'+document.getElementById('r-h4-anio').value):null;
       const huesped_final=esBolsaH4?('BOLSA OXO '+trimestre):h;
-      return JSON.stringify({prop:p,tipo:t,huesped:huesped_final,entrada:e,salida:s,bruto,comision:esBolsaH4?0:comision,comision_pasarela:0,neto:esBolsaH4?bruto:neto,personas:esBolsaH4?1:parseInt(document.getElementById('r-personas').value)||1,noches,aseo:esBolsaH4?0:aseo,semana,santi_m1:p==='M1'?santi_m1_val:santi_m1,santi_h4,h4_modo,temporada:esBolsaH4?trimestre:'baja',gestor,fee_resort_historico:0,estado_pago:esBolsaH4?'pagado':esUsoSocio?'no_paga':'pendiente'});
+      return JSON.stringify({id:window._nuevoId,prop:p,tipo:t,huesped:huesped_final,entrada:e,salida:s,bruto,comision:esBolsaH4?0:comision,comision_pasarela:esBolsaH4?0:boldVal,neto:esBolsaH4?bruto:neto,personas:esBolsaH4?1:parseInt(document.getElementById('r-personas').value)||1,noches,aseo:esBolsaH4?0:aseo,semana,santi_m1:p==='M1'?santi_m1_val:santi_m1,santi_h4,h4_modo,temporada:esBolsaH4?trimestre:'baja',gestor,fee_resort_historico:0,estado_pago:esBolsaH4?'pagado':esUsoSocio?'no_paga':'pendiente'});
     })()});
     (()=>{
       const esBolsaH4=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
@@ -1693,7 +1753,13 @@ async function guardarReserva(){
     // Show send to Naio button for Palomino properties
     if(['M1','L3','H4'].includes(p)){
       const msgEl=document.getElementById('r-msg');
-      msgEl.innerHTML+=' <button class="btn btn-blue btn-sm" style="margin-left:8px" onclick="enviarReservaNaio(\''+h+'\',\''+e+'\',\''+s+'\','+noches+',\''+p+'\','+personas+')"><i class="ti ti-send"></i> Notificar a Naio</button>';
+      const esBolsaNaio=p==='H4'&&document.getElementById('r-h4-modo').value==='hotel';
+      if(!esBolsaNaio&&window._nuevoId){
+        try{movId=await registrarMovNaio('alta',{id:window._nuevoId,prop:p,huesped:h,entrada:e,salida:s,noches,personas});}catch(e3){}
+      }
+      if(movId){
+        msgEl.innerHTML+=' <button class="btn btn-blue btn-sm" style="margin-left:8px" onclick="enviarMovNaioAhora(\''+movId+'\')"><i class="ti ti-send"></i> Notificar a Naio ahora</button> <span style="font-size:11px">(o déjala en la pestaña Naio para enviarla con otras novedades)</span>';
+      }
     }
     limpiarForm();await loadReservas();
   }catch(err){showMsg('r-msg','Error: '+err.message,'danger');}
@@ -1985,6 +2051,13 @@ async function guardarEdicion(){
     const patchData={entrada,salida,huesped,personas,bruto,comision,comision_pasarela:bold,neto,noches,estado_pago:estado};
     if(abonoVal!==null){patchData.abono=abonoVal;patchData.abono_bold=abonoBoldVal;patchData.saldo_pendiente=saldoPend;}
     await supaFetch(`/rest/v1/reservas?id=eq.${editandoId}`,{method:'PATCH',body:JSON.stringify(patchData)});
+    try{
+      const ant=window._editandoReserva;
+      if(ant&&['M1','L3','H4'].includes(ant.prop)&&!(ant.huesped||'').startsWith('BOLSA OXO')&&(ant.entrada!==entrada||ant.salida!==salida||(ant.huesped||'')!==huesped||(ant.personas||0)!==personas)){
+        const fd=d=>d?d.split('-').reverse().join('/'):'—';
+        await registrarMovNaio('modificacion',{id:ant.id,prop:ant.prop,huesped,entrada,salida,noches,personas,codigo:ant.naio_codigo},'Antes: '+fd(ant.entrada)+' al '+fd(ant.salida)+' · '+(ant.huesped||'')+' · '+(ant.personas||0)+' pers.');
+      }
+    }catch(e4){}
     cerrarModalEdit();await loadReservas();renderHistorial();
   }catch(err){showMsg('edit-msg','Error: '+err.message,'danger');}
   finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Guardar cambios';}
@@ -2045,7 +2118,7 @@ function limpiarForm(){
   const socioNomEl=document.getElementById('r-socio-nombre');if(socioNomEl)socioNomEl.value='';
   ['r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.closest('.form-group').style.opacity='1';});
   ['r-prop','r-tipo','r-huesped','r-entrada','r-salida','r-bruto','r-aseo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('r-personas').value='2';document.getElementById('r-comision').value='';document.getElementById('r-comision-display').value='';
+  document.getElementById('r-personas').value='2';const boldEl=document.getElementById('r-bold');if(boldEl)boldEl.value='';document.getElementById('r-comision').value='';document.getElementById('r-comision-display').value='';
   ['x-m1','x-h4','x-go','x-fee-resort','x-l3-directo','distrib-box','x-cruzada','cr-distrib'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   document.getElementById('btn-guardar').style.display='inline-flex';
   document.getElementById('btn-guardar-cruzada').style.display='none';
@@ -3009,6 +3082,170 @@ function renderCalendario(){
   const f2=d=>d.getDate()+'/'+(d.getMonth()+1);
   document.getElementById('cal-content').innerHTML=Object.entries(byM).map(([m,ws])=>
     `<div class="cal-month">${meses[parseInt(m)]}</div>`+ws.map(w=>`<div class="cal-week"><span class="cal-dot" style="background:${w.color}"></span><span class="cal-sem">${w.sem}</span><span class="cal-dates">${f2(w.s)} → ${f2(w.e)}</span><span class="cal-prop">${w.prop}</span></div>`).join('')).join('');
+}
+
+
+// ══ MÓDULO NAIO ══════════════════════════════════════════════════════════════
+const NAIO_TO='reservasnaio@oxohotel.com';
+const NAIO_CC='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
+const MESES_N=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const fdN=d=>d?d.split('-').reverse().join('/'):'—';
+const escN=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+async function registrarMovNaio(tipo,r,detalle){
+  const snap={reserva_id:r.id,prop:r.prop,huesped:r.huesped,entrada:r.entrada,salida:r.salida,noches:r.noches,personas:r.personas,codigo:r.codigo||null};
+  const pend=naioMovs.filter(m=>m.reserva_id===r.id&&!m.enviado_at);
+  const alta=pend.find(m=>m.tipo==='alta');
+  const modi=pend.find(m=>m.tipo==='modificacion');
+  let resId=null;
+  if(tipo==='alta'){
+    const id=crypto.randomUUID();
+    await supaFetch('/rest/v1/naio_movimientos',{method:'POST',body:JSON.stringify({id,tipo:'alta',...snap})});
+    resId=id;
+  } else if(tipo==='modificacion'){
+    if(alta){await supaFetch('/rest/v1/naio_movimientos?id=eq.'+alta.id,{method:'PATCH',body:JSON.stringify(snap)});resId=alta.id;}
+    else if(modi){await supaFetch('/rest/v1/naio_movimientos?id=eq.'+modi.id,{method:'PATCH',body:JSON.stringify(snap)});resId=modi.id;}
+    else{const id=crypto.randomUUID();await supaFetch('/rest/v1/naio_movimientos',{method:'POST',body:JSON.stringify({id,tipo:'modificacion',detalle:detalle||null,...snap})});resId=id;}
+  } else if(tipo==='cancelacion'){
+    for(const m of pend.filter(x=>x.tipo==='modificacion'))await supaFetch('/rest/v1/naio_movimientos?id=eq.'+m.id,{method:'DELETE'});
+    if(alta){await supaFetch('/rest/v1/naio_movimientos?id=eq.'+alta.id,{method:'DELETE'});}
+    else{const id=crypto.randomUUID();await supaFetch('/rest/v1/naio_movimientos',{method:'POST',body:JSON.stringify({id,tipo:'cancelacion',...snap})});resId=id;}
+  }
+  naioMovs=(await supaFetch('/rest/v1/naio_movimientos?select=*&order=created_at.asc'))||[];
+  return resId;
+}
+
+async function cancelarReserva(){
+  if(!editandoId)return;
+  const r=todasReservas.find(x=>x.id===editandoId)||reservas.find(x=>x.id===editandoId);
+  if(!r)return;
+  if(!confirm('¿Cancelar la reserva de '+(r.huesped||'este huésped')+'? Sale del Historial y de los reportes, y queda en la pestaña Naio como cancelada.'))return;
+  try{
+    await supaFetch('/rest/v1/reservas?id=eq.'+editandoId,{method:'PATCH',body:JSON.stringify({cancelada:true,cancelada_at:new Date().toISOString()})});
+    if(['M1','L3','H4'].includes(r.prop)&&!(r.huesped||'').startsWith('BOLSA OXO')){
+      try{await registrarMovNaio('cancelacion',{id:r.id,prop:r.prop,huesped:r.huesped,entrada:r.entrada,salida:r.salida,noches:r.noches,personas:r.personas,codigo:r.naio_codigo});}catch(e){}
+    }
+    cerrarModalEdit();await loadReservas();renderHistorial();
+  }catch(err){showMsg('edit-msg','Error al cancelar: '+err.message,'danger');}
+}
+
+function naioReservasMes(anio,mes){
+  const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+  const fin=`${anio}-${String(mes).padStart(2,'0')}-${String(new Date(anio,mes,0).getDate()).padStart(2,'0')}`;
+  const base=todasReservas.filter(r=>['M1','L3','H4'].includes(r.prop)&&r.entrada&&!(r.huesped||'').startsWith('BOLSA OXO')&&r.entrada<=fin&&(r.salida||r.entrada)>=inicio);
+  const merged=[];
+  base.forEach(r=>{
+    const rE=r.entrada,rS=r.salida||r.entrada;
+    const ex=merged.find(m=>m.prop===r.prop&&m.huesped===r.huesped&&rE<=m.salida&&rS>=m.entrada);
+    if(ex){
+      ex._ids.push(r.id);
+      if(rE<ex.entrada)ex.entrada=rE;
+      if(rS>ex.salida)ex.salida=rS;
+      ex.noches=Math.round((new Date(ex.salida)-new Date(ex.entrada))/86400000);
+      if((r.personas||0)>(ex.personas||0))ex.personas=r.personas;
+      if(!ex.naio_codigo&&r.naio_codigo)ex.naio_codigo=r.naio_codigo;
+    }else merged.push({...r,salida:rS,_ids:[r.id]});
+  });
+  merged.sort((a,b)=>a.entrada.localeCompare(b.entrada)||a.prop.localeCompare(b.prop));
+  return merged;
+}
+
+function naioEstadoMov(ids){
+  const pend=naioMovs.filter(m=>ids.includes(m.reserva_id)&&!m.enviado_at);
+  if(pend.some(m=>m.tipo==='alta'))return 'nueva';
+  if(pend.some(m=>m.tipo==='modificacion'))return 'modificada';
+  return '';
+}
+
+function renderNaio(){
+  const sm=document.getElementById('nx-mes'),sa=document.getElementById('nx-anio');
+  if(!sm||!sa)return;
+  if(!sm.dataset.init){const h=new Date();sm.value=h.getMonth()+1;sa.value=h.getFullYear();sm.dataset.init='1';}
+  const mes=parseInt(sm.value),anio=parseInt(sa.value);
+  const lista=naioReservasMes(anio,mes);
+  const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+  const fin=`${anio}-${String(mes).padStart(2,'0')}-${String(new Date(anio,mes,0).getDate()).padStart(2,'0')}`;
+  const conCod=lista.filter(r=>r.naio_codigo).length;
+  const sinCod=lista.length-conCod;
+  const canc=naioCanceladas.filter(r=>['M1','L3','H4'].includes(r.prop)&&r.entrada&&r.entrada<=fin&&(r.salida||r.entrada)>=inicio&&!(r.huesped||'').startsWith('BOLSA OXO'));
+  const pend=naioMovs.filter(m=>!m.enviado_at);
+  const chip=(t,bg,c)=>`<span style="background:${bg};color:${c};padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600">${t}</span>`;
+  document.getElementById('nx-resumen').innerHTML=chip(lista.length+' reservas','#EEE','#333')+chip(conCod+' con código','#E6F4EA','#1E7B34')+chip(sinCod+' sin código','#FFF4E5','#B25E00')+chip(canc.length+' canceladas','#FDECEA','#B3261E')+chip(pend.length+' novedades por enviar','#E8F0FE','#1A56B0');
+  document.getElementById('nx-titulo').textContent='Reservas '+MESES_N[mes-1]+' '+anio+' — '+lista.length;
+  // Tabla
+  const badge=(r)=>{const e=naioEstadoMov(r._ids);if(e==='nueva')return '<span class="estado" style="background:#E8F0FE;color:#1A56B0">NUEVA · POR ENVIAR</span>';if(e==='modificada')return '<span class="estado" style="background:#FFF4E5;color:#B25E00">MODIFICADA · POR ENVIAR</span>';return r.naio_codigo?'<span class="estado" style="background:#E6F4EA;color:#1E7B34">CONFIRMADA</span>':'<span class="estado" style="background:#FFF4E5;color:#B25E00">SIN CÓDIGO</span>';};
+  document.getElementById('nx-tabla').innerHTML=lista.length?'<table><thead><tr><th>Check in</th><th>Check out</th><th>Noches</th><th>Huésped</th><th>Pers.</th><th>Villa</th><th>Código Naio</th><th>Estado</th></tr></thead><tbody>'+lista.map(r=>`<tr><td>${fdN(r.entrada)}</td><td>${fdN(r.salida)}</td><td>${r.noches||0}</td><td>${escN(r.huesped||'—')}</td><td>${r.personas||'—'}</td><td>${r.prop}</td><td><input type="text" value="${escN(r.naio_codigo||'')}" placeholder="código" style="width:110px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Mono',monospace" onchange="guardarCodigoNaio('${r._ids.join(',')}',this.value,this)"></td><td>${badge(r)}</td></tr>`).join('')+'</tbody></table>':'<div style="text-align:center;padding:1.5rem;color:var(--text-3)">No hay reservas para este mes.</div>';
+  // Pendientes
+  const tl={alta:'ADICIÓN',cancelacion:'CANCELACIÓN',modificacion:'MODIFICACIÓN'};
+  document.getElementById('nx-pendientes').innerHTML=pend.length?'<table><thead><tr><th>Tipo</th><th>Check in</th><th>Check out</th><th>Huésped</th><th>Villa</th><th>Código</th><th></th></tr></thead><tbody>'+pend.map(m=>`<tr><td><strong>${tl[m.tipo]||m.tipo}</strong></td><td>${fdN(m.entrada)}</td><td>${fdN(m.salida)}</td><td>${escN(m.huesped)}</td><td>${m.prop}</td><td>${escN(m.codigo||'')}</td><td style="white-space:nowrap"><button class="btn btn-secondary btn-sm" onclick="enviarMovNaioAhora('${m.id}')"><i class="ti ti-send"></i> Solo esta</button> <button class="btn btn-secondary btn-sm" onclick="descartarMovNaio('${m.id}')" title="Descartar"><i class="ti ti-x"></i></button></td></tr>`).join('')+'</tbody></table>':'<div style="color:var(--text-3);font-size:12px;padding:6px 0">No hay novedades pendientes. Todo lo enviado a Naio está al día.</div>';
+  document.getElementById('nx-pend-btns').innerHTML=pend.length?'<button class="btn btn-secondary btn-sm" onclick="copiarNovedadesNaio()"><i class="ti ti-copy"></i> Copiar novedades</button><button class="btn btn-blue btn-sm" onclick="correoNovedadesNaio()"><i class="ti ti-send"></i> Correo novedades</button><button class="btn btn-primary btn-sm" onclick="marcarEnviadasNaio()"><i class="ti ti-check"></i> Marcar como enviadas</button>':'';
+  // Canceladas
+  document.getElementById('nx-canceladas').innerHTML=canc.length?'<table><thead><tr><th>Check in</th><th>Check out</th><th>Huésped</th><th>Villa</th><th>Código</th><th>Aviso a Naio</th></tr></thead><tbody>'+canc.map(r=>{const mv=naioMovs.find(m=>m.reserva_id===r.id&&m.tipo==='cancelacion');const av=mv?(mv.enviado_at?'Enviado '+fdN(mv.enviado_at.slice(0,10)):'<span style="color:#B25E00;font-weight:600">Por enviar</span>'):'No requerido';return `<tr style="color:var(--text-3)"><td>${fdN(r.entrada)}</td><td>${fdN(r.salida)}</td><td style="text-decoration:line-through">${escN(r.huesped||'—')}</td><td>${r.prop}</td><td>${escN(r.naio_codigo||'')}</td><td>${av}</td></tr>`;}).join('')+'</tbody></table>':'<div style="color:var(--text-3);font-size:12px">Sin cancelaciones este mes.</div>';
+  // Historia
+  const hist=naioMovs.filter(m=>m.entrada&&m.entrada<=fin&&(m.salida||m.entrada)>=inicio);
+  document.getElementById('nx-historia').innerHTML=hist.length?'<table><thead><tr><th>Registrado</th><th>Movimiento</th><th>Huésped</th><th>Villa</th><th>Fechas</th><th>Enviado</th></tr></thead><tbody>'+hist.map(m=>`<tr><td>${fdN((m.created_at||'').slice(0,10))}</td><td>${tl[m.tipo]||m.tipo}</td><td>${escN(m.huesped)}</td><td>${m.prop}</td><td>${fdN(m.entrada)} → ${fdN(m.salida)}${m.detalle?'<br><span style="font-size:11px;color:var(--text-3)">'+escN(m.detalle)+'</span>':''}</td><td>${m.enviado_at?fdN(m.enviado_at.slice(0,10)):'<span style="color:#B25E00;font-weight:600">Pendiente</span>'}</td></tr>`).join('')+'</tbody></table>':'<div style="color:var(--text-3);font-size:12px">Aún no hay movimientos registrados este mes. Se registran desde ahora en adelante.</div>';
+}
+
+async function guardarCodigoNaio(idsStr,val,inp){
+  const codigo=(val||'').trim().toUpperCase();
+  inp.value=codigo;
+  try{
+    for(const id of idsStr.split(','))await supaFetch('/rest/v1/reservas?id=eq.'+id,{method:'PATCH',body:JSON.stringify({naio_codigo:codigo||null})});
+    await loadReservas();renderNaio();toastNaio('Código guardado');
+  }catch(e){alert('Error guardando código: '+e.message);}
+}
+
+function toastNaio(t){const el=document.getElementById('nx-toast');if(!el)return;el.textContent=t;el.style.display='block';setTimeout(()=>{el.style.display='none';},2200);}
+async function copiarTexto(t){
+  try{await navigator.clipboard.writeText(t);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+  toastNaio('Copiado al portapapeles');
+}
+
+function textoNovedades(movs){
+  const fila=m=>`${fdN(m.entrada)}\t${fdN(m.salida)}\t${m.noches||0}\t${m.huesped||''}\t${m.personas||0}\t${m.prop}\t${m.codigo||'0'}`;
+  const head='Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n'+'─'.repeat(70)+'\n';
+  let t='Hola Maria, cómo estás??\n\nMe ayudas por favor con estas novedades de reservas:\n\n';
+  const sec=(titulo,tipo,extra)=>{const l=movs.filter(m=>m.tipo===tipo);if(!l.length)return;t+=titulo+'\n\n'+head+l.map(m=>fila(m)+(extra&&m.detalle?'   ('+m.detalle+')':'')).join('\n')+'\n\n';};
+  sec('CANCELACIÓN','cancelacion');
+  sec('ADICIÓN','alta');
+  sec('MODIFICACIÓN','modificacion',true);
+  return t+'Gracias!!';
+}
+function textoConsolidado(anio,mes){
+  const lista=naioReservasMes(anio,mes);
+  let t='Hola Maria, cómo estás??\n\nTe comparto el calendario consolidado de reservas de '+MESES_N[mes-1]+' '+anio+' de las Villas Naio:\n\n';
+  t+='Check in\tCheck out\tNoches\tNombre\tHuéspedes\tVilla\tReserva\n'+'─'.repeat(70)+'\n';
+  t+=lista.map(r=>`${fdN(r.entrada)}\t${fdN(r.salida)}\t${r.noches||0}\t${r.huesped||''}\t${r.personas||0}\t${r.prop}\t${r.naio_codigo||'PENDIENTE'}`).join('\n');
+  return t+'\n\nGracias!!';
+}
+function abrirCorreoNaio(asunto,cuerpo){window.location.href=`mailto:${NAIO_TO}?cc=${encodeURIComponent(NAIO_CC)}&subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;}
+const movsPend=()=>naioMovs.filter(m=>!m.enviado_at);
+function copiarNovedadesNaio(){copiarTexto(textoNovedades(movsPend()));}
+function correoNovedadesNaio(){abrirCorreoNaio('*** Novedades de reservas Villas Naio',textoNovedades(movsPend()));}
+function copiarConsolidadoNaio(){copiarTexto(textoConsolidado(parseInt(document.getElementById('nx-anio').value),parseInt(document.getElementById('nx-mes').value)));}
+function correoConsolidadoNaio(){const a=parseInt(document.getElementById('nx-anio').value),m=parseInt(document.getElementById('nx-mes').value);abrirCorreoNaio('*** Calendario de reservas '+MESES_N[m-1]+' '+a+' Villas Naio',textoConsolidado(a,m));}
+async function marcarEnviadasNaio(){
+  const pend=movsPend();if(!pend.length)return;
+  if(!confirm('¿Marcar las '+pend.length+' novedades como enviadas a Naio?'))return;
+  try{
+    const ids=pend.map(m=>m.id).join(',');
+    await supaFetch('/rest/v1/naio_movimientos?id=in.('+ids+')',{method:'PATCH',body:JSON.stringify({enviado_at:new Date().toISOString()})});
+    await loadReservas();renderNaio();toastNaio('Marcadas como enviadas');
+  }catch(e){alert('Error: '+e.message);}
+}
+async function descartarMovNaio(id){
+  if(!confirm('¿Descartar esta novedad sin enviarla? Naio no será notificado de ella.'))return;
+  try{await supaFetch('/rest/v1/naio_movimientos?id=eq.'+id,{method:'DELETE'});await loadReservas();renderNaio();}catch(e){alert('Error: '+e.message);}
+}
+function enviarMovNaioAhora(id){
+  const m=naioMovs.find(x=>x.id===id);if(!m)return;
+  const asunto={alta:'*** Adición de reserva Villa '+m.prop,cancelacion:'*** Cancelación de reserva Villa '+m.prop,modificacion:'*** Modificación de reserva Villa '+m.prop}[m.tipo]||'*** Novedad reserva Villa '+m.prop;
+  abrirCorreoNaio(asunto,textoNovedades([m]));
+  setTimeout(async()=>{
+    if(confirm('¿Ya enviaste el correo a Naio? Aceptar = marcar esta novedad como enviada.')){
+      try{await supaFetch('/rest/v1/naio_movimientos?id=eq.'+id,{method:'PATCH',body:JSON.stringify({enviado_at:new Date().toISOString()})});await loadReservas();if(document.getElementById('section-naio').classList.contains('active'))renderNaio();}catch(e){alert('Error: '+e.message);}
+    }
+  },1500);
 }
 
 // ── INIT: restaurar sesión o mostrar login ────────────────────────────────────
