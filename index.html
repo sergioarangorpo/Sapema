@@ -1226,7 +1226,11 @@ const TIPOS={GO:['Airbnb'],M1:['Airbnb','Booking','Directo'],L3:['Airbnb','Booki
 
 async function supaFetch(path,opts={}){
   const method=(opts.method||'GET').toUpperCase();
-  const res=await fetch(SUPA_URL+path,{headers:getHeaders(method),...opts});
+  const baseHeaders=getHeaders(method);
+  const extraHeaders=opts.headers||{};
+  const mergedHeaders={...baseHeaders,...extraHeaders};
+  const {headers:_,  ...restOpts}=opts;
+  const res=await fetch(SUPA_URL+path,{headers:mergedHeaders,...restOpts});
   if(!res.ok){
     const txt=await res.text();
     throw new Error(txt||'Error '+res.status);
@@ -3796,15 +3800,12 @@ async function seedFlujoCaja(){
 
 async function loadFlujoCaja(){
   try{
-    flujoCajaData=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc,id.desc&limit=1000')||[];
-    // Si la tabla está vacía, hacer seed automático
-    if(flujoCajaData.length===0){
-      await seedFlujoCaja();
-      flujoCajaData=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc,id.desc&limit=1000')||[];
-    }
-  }catch(e){ flujoCajaData=[]; }
+    const rows=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc,id.desc&limit=1000');
+    flujoCajaData=Array.isArray(rows)?rows:[];
+  }catch(e){ console.error('loadFlujoCaja error:',e); flujoCajaData=[]; }
   try{
-    gastosData=await supaFetch('/rest/v1/gastos_facturas?select=*&order=fecha.desc')||[];
+    const gRows=await supaFetch('/rest/v1/gastos_facturas?select=*&order=fecha.desc');
+    gastosData=Array.isArray(gRows)?gRows:[];
   }catch(e){ gastosData=[]; }
 }
 
