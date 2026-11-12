@@ -296,6 +296,7 @@
     <button class="nav-btn" onclick="showSection('semanas',this)"><i class="ti ti-calendar-week"></i> Semanas M1</button>
     <button class="nav-btn" onclick="showSection('naio',this)" id="nav-naio"><i class="ti ti-building"></i> Naio</button>
     <button class="nav-btn" onclick="showSection('liquidaciones',this)"><i class="ti ti-receipt"></i> Liquidaciones</button>
+    <button class="nav-btn" onclick="showSection('contabilidad',this)" id="nav-contabilidad"><i class="ti ti-report-money"></i> Contabilidad</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -1001,6 +1002,7 @@ const ROLES={
   'jdbj83@gmail.com':             {nombre:'Juan David Bridge', rol:'socio', props:['M1','H4']},
   'llondono1983@gmail.com':         {nombre:'Alejandro Londoño',rol:'socio', props:['L3']},
   'arangorestreposantiago@gmail.com':{nombre:'Santiago Arango',rol:'socio', props:['M1','H4']},
+  'cuentasclaras.inc@gmail.com':    {nombre:'Leidy Mejía',      rol:'contadora', props:[]},
 };
 let currentUser=null; // {email, nombre, rol, props}
 let todasReservas=[]; // sin filtro de rol, para calendario
@@ -1064,6 +1066,16 @@ function applyRoleUI(){
   const btnSocios=document.querySelector('[onclick*=socios]');
   if(btnSocios)btnSocios.style.display=esAdmin?'':'none';
   const btnNaioNav=document.getElementById('nav-naio');if(btnNaioNav)btnNaioNav.style.display=esAdmin?'':'none';
+  const esContadora=currentUser.rol==='contadora';
+  const btnCont=document.getElementById('nav-contabilidad');
+  if(btnCont)btnCont.style.display=(esAdmin||esContadora)?'':'none';
+  // Contadora solo ve Contabilidad — ocultar todo lo demás
+  if(esContadora){
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      if(!b.id||b.id!=='nav-contabilidad') b.style.display='none';
+    });
+    document.getElementById('nav-contabilidad').style.display='';
+  }
   // Filtrar propiedades en el selector de nueva reserva
   const selProp=document.getElementById('r-prop');
   if(selProp){
@@ -1116,7 +1128,11 @@ async function loadReservas(){
     reservas=filtrarPorRol(todasReservas);
     try{naioMovs=(await supaFetch('/rest/v1/naio_movimientos?select=*&order=created_at.asc'))||[];}catch(e2){naioMovs=[];}
     document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-ok"><i class="ti ti-circle-check"></i> Conectado — Sapema</div>';
-    renderDashboard();
+    if(currentUser.rol==='contadora'){
+      showSection('contabilidad',document.getElementById('nav-contabilidad'));
+    } else {
+      renderDashboard();
+    }
   }catch(e){document.getElementById('conn-status').innerHTML='<div class="conn-badge conn-err"><i class="ti ti-alert-circle"></i> Sin conexión</div>';}
 }
 function fmt(n){return '$'+Math.round(n||0).toLocaleString('es-CO');}
@@ -1137,6 +1153,7 @@ function showSection(id,btn){
   if(id==='calendario'){initCalendario();renderDisponibilidad();}
   if(id==='liquidaciones')renderLiquidaciones();
   if(id==='naio')renderNaio();
+  if(id==='contabilidad')renderContabilidad();
   if(id==='reservas'){setTimeout(actualizarRcResumen,100);}
 }
 
@@ -3260,7 +3277,412 @@ function enviarMovNaioAhora(id){
     loadReservas();
   }
   // Si no hay sesión, el login-screen ya está visible por defecto
+
+// ── CONTABILIDAD ─────────────────────────────────────────────────────────────
+let flujoCajaData=[], gastosData=[];
+
+function switchCtab(tab){
+  document.getElementById('ctab-panel-flujo').style.display=tab==='flujo'?'':'none';
+  document.getElementById('ctab-panel-gastos').style.display=tab==='gastos'?'':'none';
+  ['flujo','gastos'].forEach(t=>{
+    const btn=document.getElementById('ctab-'+t);
+    btn.style.color=t===tab?'var(--accent)':'var(--text-2)';
+    btn.style.borderBottomColor=t===tab?'var(--accent)':'transparent';
+  });
+  if(tab==='gastos') renderGastos();
+}
+
+async function renderContabilidad(){
+  await loadFlujoCaja();
+  renderFlujoCaja();
+  poblarMesesFlujo();
+}
+
+async function loadFlujoCaja(){
+  try{
+    flujoCajaData=await supaFetch('/rest/v1/flujo_caja?select=*&order=fecha.desc')||[];
+  }catch(e){ flujoCajaData=[]; }
+  try{
+    gastosData=await supaFetch('/rest/v1/gastos_facturas?select=*&order=fecha.desc')||[];
+  }catch(e){ gastosData=[]; }
+}
+
+function poblarMesesFlujo(){
+  const sel=document.getElementById('fc-mes'); if(!sel) return;
+  const meses=new Set(flujoCajaData.map(r=>r.fecha.substring(0,7)));
+  const curVal=sel.value;
+  sel.innerHTML='<option value="">Todos los meses</option>';
+  [...meses].sort().reverse().forEach(m=>{
+    const [y,mo]=m.split('-');
+    const nombre=new Date(y,mo-1,1).toLocaleString('es-CO',{month:'long',year:'numeric'});
+    sel.innerHTML+=`<option value="${m}">${nombre.charAt(0).toUpperCase()+nombre.slice(1)}</option>`;
+  });
+  if(curVal) sel.value=curVal;
+}
+
+function renderFlujoCaja(){
+  const mes=document.getElementById('fc-mes')?.value||'';
+  const tipo=document.getElementById('fc-tipo')?.value||'';
+  let data=flujoCajaData;
+  if(mes) data=data.filter(r=>r.fecha.startsWith(mes));
+  if(tipo) data=data.filter(r=>r.tipo===tipo);
+
+  const tbody=document.getElementById('fc-body');
+  const empty=document.getElementById('fc-empty');
+  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
+
+  const totalIng=data.filter(r=>r.tipo==='ingreso').reduce((s,r)=>s+(+r.valor),0);
+  const totalEgr=data.filter(r=>r.tipo==='egreso').reduce((s,r)=>s+(+r.valor),0);
+  const totEl=document.getElementById('fc-totales');
+  totEl.innerHTML=`
+    <div style="padding:10px 16px;background:rgba(34,197,94,.1);border-radius:var(--radius-sm);border:1px solid rgba(34,197,94,.2);">
+      <div style="font-size:11px;color:var(--text-3);font-weight:600;">INGRESOS</div>
+      <div style="font-size:18px;font-weight:700;color:#22c55e;">${fmt(totalIng)}</div>
+    </div>
+    <div style="padding:10px 16px;background:rgba(239,68,68,.1);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,.2);">
+      <div style="font-size:11px;color:var(--text-3);font-weight:600;">EGRESOS</div>
+      <div style="font-size:18px;font-weight:700;color:var(--red);">${fmt(totalEgr)}</div>
+    </div>
+    <div style="padding:10px 16px;background:var(--bg-2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text-3);font-weight:600;">BALANCE</div>
+      <div style="font-size:18px;font-weight:700;color:${totalIng-totalEgr>=0?'#22c55e':'var(--red)'};">${fmt(totalIng-totalEgr)}</div>
+    </div>`;
+
+  const catLabel={bold_reserva:'BOLD Reserva',gasto:'Gasto',lote_cartagena:'Lote Cartagena',otro:'Otro'};
+  tbody.innerHTML=data.map(r=>{
+    const fecha=r.fecha?new Date(r.fecha+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const soporte=r.pasaporte_url||r.factura_url
+      ?`<a href="${r.pasaporte_url||r.factura_url}" target="_blank" style="color:var(--accent);font-size:12px;"><i class="ti ti-paperclip"></i> Ver</a>`
+      :'<span style="color:var(--text-3)">—</span>';
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:9px 10px;white-space:nowrap;">${fecha}</td>
+      <td style="padding:9px 10px;">${r.detalle}</td>
+      <td style="padding:9px 10px;"><span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">${catLabel[r.categoria]||r.categoria||'—'}</span></td>
+      <td style="padding:9px 10px;text-align:right;font-weight:600;color:#22c55e;">${r.tipo==='ingreso'?fmt(r.valor):'—'}</td>
+      <td style="padding:9px 10px;text-align:right;font-weight:600;color:var(--red);">${r.tipo==='egreso'?fmt(r.valor):'—'}</td>
+      <td style="padding:9px 10px;text-align:center;">${soporte}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function renderGastos(){
+  const tbody=document.getElementById('gastos-body');
+  const empty=document.getElementById('gastos-empty');
+  if(!gastosData.length){ tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
+  const catLabel={gasto:'Gasto operativo',lote_cartagena:'Lote Cartagena',otro:'Otro'};
+  tbody.innerHTML=gastosData.map(r=>{
+    const fecha=r.fecha?new Date(r.fecha+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const factura=r.factura_url
+      ?`<a href="${r.factura_url}" target="_blank" style="color:var(--accent);font-size:12px;"><i class="ti ti-external-link"></i> Drive</a>`
+      :'<span style="color:var(--text-3)">—</span>';
+    const estado=r.confirmado
+      ?'<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(34,197,94,.12);color:#22c55e;font-weight:600;">Confirmado</span>'
+      :'<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">Pendiente</span>';
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:9px 10px;white-space:nowrap;">${fecha}</td>
+      <td style="padding:9px 10px;font-weight:500;">${r.establecimiento}</td>
+      <td style="padding:9px 10px;"><span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--bg-2);color:var(--text-2);">${catLabel[r.categoria]||r.categoria||'—'}</span></td>
+      <td style="padding:9px 10px;text-align:right;font-weight:600;color:var(--red);">${fmt(r.valor)}</td>
+      <td style="padding:9px 10px;text-align:center;">${factura}</td>
+      <td style="padding:9px 10px;text-align:center;">${estado}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Flujo automático desde reserva BOLD al liquidar ──────────────────────────
+async function registrarEnFlujoCaja(reserva, neto){
+  // Calcular siguiente día hábil
+  const checkin=new Date(reserva.entrada+'T12:00:00');
+  let d=new Date(checkin); d.setDate(d.getDate()+1);
+  while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1);
+  const fechaFlujo=d.toISOString().split('T')[0];
+  const detalle='BOLD - '+reserva.huesped.toUpperCase();
+  await supaFetch('/rest/v1/flujo_caja',{
+    method:'POST',
+    body:JSON.stringify({
+      fecha:fechaFlujo, tipo:'ingreso', valor:neto,
+      detalle, categoria:'bold_reserva',
+      reserva_id:reserva.id,
+      created_by:currentUser?.email||''
+    })
+  });
+}
+
+// ── Modal Cargar Factura ─────────────────────────────────────────────────────
+let _gastoFileBase64=null, _gastoFileName=null;
+
+function abrirModalGasto(){
+  document.getElementById('modal-gasto').style.display='flex';
+  document.getElementById('gasto-campos').style.display='none';
+  document.getElementById('gasto-extrayendo').style.display='none';
+  document.getElementById('btn-gasto-guardar').style.display='none';
+  document.getElementById('gasto-file').value='';
+  document.getElementById('gasto-msg').style.display='none';
+  _gastoFileBase64=null; _gastoFileName=null;
+}
+function cerrarModalGasto(){ document.getElementById('modal-gasto').style.display='none'; }
+
+function getDrivePath(fecha, cat){
+  const d=new Date(fecha+'T12:00:00');
+  const y=d.getFullYear();
+  const m=d.getMonth()+1;
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const nomMes=m+'. '+meses[m-1];
+  if(cat==='lote_cartagena') return `${y}/${nomMes}/Lote Cartagena`;
+  return `${y}/${nomMes}`;
+}
+
+async function previewGastoFile(input){
+  const file=input.files[0]; if(!file) return;
+  _gastoFileName=file.name;
+  const campos=document.getElementById('gasto-campos');
+  const ext=document.getElementById('gasto-extrayendo');
+  const btn=document.getElementById('btn-gasto-guardar');
+  campos.style.display='none'; ext.style.display='block'; btn.style.display='none';
+
+  // Leer como base64 para OCR simple con canvas (imágenes) o mostrar campos vacíos para PDF
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    _gastoFileBase64=e.target.result;
+    // Intentar extraer fecha/monto/nombre con heurística simple del nombre del archivo y metadata
+    // Para PDF no podemos extraer en cliente — dejamos campos para que el usuario llene
+    // Para imágenes tampoco sin OCR backend — mostramos campos con fecha de hoy como default
+    const hoy=new Date().toISOString().split('T')[0];
+    document.getElementById('gasto-fecha').value=hoy;
+    document.getElementById('gasto-valor').value='';
+    // Intentar sacar nombre del establecimiento del nombre de archivo
+    let nomEstab=file.name.replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ').replace(/\d{8}/g,'').trim();
+    document.getElementById('gasto-estab').value=nomEstab;
+    document.getElementById('gasto-obs').value='';
+    document.getElementById('gasto-cat').value='gasto';
+    actualizarDrivePath();
+    ext.style.display='none';
+    campos.style.display='flex';
+    btn.style.display='';
+  };
+  reader.readAsDataURL(file);
+}
+
+function actualizarDrivePath(){
+  const fecha=document.getElementById('gasto-fecha').value;
+  const cat=document.getElementById('gasto-cat').value;
+  const estab=document.getElementById('gasto-estab').value;
+  if(!fecha) return;
+  const path=getDrivePath(fecha,cat);
+  const d=new Date(fecha+'T12:00:00');
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  const nombreArchivo=`${y}${m}${day}_${estab||'documento'}`;
+  document.getElementById('gasto-drive-path-txt').textContent=`Contabilidad Sapema/${path}/${nombreArchivo}`;
+}
+
+document.addEventListener('change',function(e){
+  if(e.target.id==='gasto-fecha'||e.target.id==='gasto-cat'||e.target.id==='gasto-estab') actualizarDrivePath();
+});
+
+async function guardarGasto(){
+  const fecha=document.getElementById('gasto-fecha').value;
+  const valor=parseFloat(document.getElementById('gasto-valor').value);
+  const estab=document.getElementById('gasto-estab').value.trim();
+  const cat=document.getElementById('gasto-cat').value;
+  const obs=document.getElementById('gasto-obs').value.trim();
+  const msgEl=document.getElementById('gasto-msg');
+
+  if(!fecha||!valor||!estab){
+    msgEl.style.display=''; msgEl.style.background='rgba(239,68,68,.1)'; msgEl.style.color='var(--red)';
+    msgEl.textContent='Por favor completa fecha, valor y establecimiento.'; return;
+  }
+
+  const btn=document.getElementById('btn-gasto-guardar');
+  btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
+
+  try{
+    const d=new Date(fecha+'T12:00:00');
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+    const nomArchivo=`${y}${m}${day}_${estab}`;
+    const drivePath=getDrivePath(fecha,cat)+'/'+nomArchivo;
+
+    // Guardar en Supabase (Drive upload se hace externamente por ahora)
+    const rec={fecha,valor,establecimiento:estab,categoria:cat,observaciones:obs,
+      drive_path:'Contabilidad Sapema/'+drivePath,
+      confirmado:true, created_by:currentUser?.email||''};
+    await supaFetch('/rest/v1/gastos_facturas',{method:'POST',body:JSON.stringify(rec)});
+
+    // También registrar en flujo de caja como egreso
+    await supaFetch('/rest/v1/flujo_caja',{method:'POST',body:JSON.stringify({
+      fecha, tipo:'egreso', valor, detalle:estab.toUpperCase(),
+      categoria:cat, observaciones:obs, created_by:currentUser?.email||''
+    })});
+
+    msgEl.style.display=''; msgEl.style.background='rgba(34,197,94,.1)'; msgEl.style.color='#22c55e';
+    msgEl.textContent='\u2713 Guardado correctamente. Ruta Drive: Contabilidad Sapema/'+drivePath;
+    btn.innerHTML='<i class="ti ti-check"></i> Guardado';
+
+    // Recargar datos
+    await loadFlujoCaja();
+    renderFlujoCaja();
+    poblarMesesFlujo();
+    renderGastos();
+
+    setTimeout(()=>{ cerrarModalGasto(); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Confirmar y guardar'; },2500);
+  }catch(e){
+    msgEl.style.display=''; msgEl.style.background='rgba(239,68,68,.1)'; msgEl.style.color='var(--red)';
+    msgEl.textContent='Error: '+e.message;
+    btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Confirmar y guardar';
+  }
+}
+
+// ── Exportar flujo de caja a CSV ─────────────────────────────────────────────
+function exportarFlujoCaja(){
+  const mes=document.getElementById('fc-mes')?.value||'';
+  let data=flujoCajaData;
+  if(mes) data=data.filter(r=>r.fecha.startsWith(mes));
+  const header='Fecha,Tipo,Detalle,Categoria,Ingreso,Egreso,Observaciones';
+  const rows=data.map(r=>[
+    r.fecha, r.tipo, '"'+(r.detalle||'').replace(/"/g,"''")+'"',
+    r.categoria||'',
+    r.tipo==='ingreso'?r.valor:'',
+    r.tipo==='egreso'?r.valor:'',
+    '"'+(r.observaciones||'').replace(/"/g,"''")+'"'
+  ].join(','));
+  const csv=header+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url;
+  a.download='FlujoCaja_Sapema'+(mes?'_'+mes:'')+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ── Hook en confirmarPago para auto-registrar BOLD en flujo ──────────────────
+const _origConfirmarPago=typeof confirmarPago==='function'?confirmarPago:null;
+// Se llama después de que confirmarPago ya guardó — lo hacemos en un wrapper al final del script
+
 })();
 </script>
+
+  <!-- CONTABILIDAD -->
+  <div id="section-contabilidad" class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:18px;font-weight:700;color:var(--text)"><i class="ti ti-report-money" style="margin-right:8px;color:var(--accent)"></i>Contabilidad Sapema SAS</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalGasto()"><i class="ti ti-upload"></i> Cargar factura</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportarFlujoCaja()"><i class="ti ti-download"></i> Exportar Excel</button>
+      </div>
+    </div>
+
+    <!-- TABS INTERNOS -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;">
+      <button id="ctab-flujo" onclick="switchCtab('flujo')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;">Flujo de caja</button>
+      <button id="ctab-gastos" onclick="switchCtab('gastos')" style="padding:8px 18px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-2px;">Facturas y gastos</button>
+    </div>
+
+    <!-- FLUJO DE CAJA -->
+    <div id="ctab-panel-flujo">
+      <!-- Filtros -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+        <select id="fc-mes" onchange="renderFlujoCaja()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="">Todos los meses</option>
+        </select>
+        <select id="fc-tipo" onchange="renderFlujoCaja()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;">
+          <option value="">Todos</option>
+          <option value="ingreso">Ingresos</option>
+          <option value="egreso">Egresos</option>
+        </select>
+      </div>
+      <!-- Totales -->
+      <div id="fc-totales" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
+      <!-- Tabla -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;" id="fc-tabla">
+          <thead>
+            <tr style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);">
+              <th style="padding:8px 10px;text-align:left;font-weight:600;">Fecha</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:600;">Detalle</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:600;">Categoría</th>
+              <th style="padding:8px 10px;text-align:right;font-weight:600;">Ingreso</th>
+              <th style="padding:8px 10px;text-align:right;font-weight:600;">Egreso</th>
+              <th style="padding:8px 10px;text-align:center;font-weight:600;">Soporte</th>
+            </tr>
+          </thead>
+          <tbody id="fc-body"></tbody>
+        </table>
+      </div>
+      <div id="fc-empty" style="display:none;text-align:center;padding:40px;color:var(--text-3);font-size:14px;">Sin registros para este período</div>
+    </div>
+
+    <!-- FACTURAS Y GASTOS -->
+    <div id="ctab-panel-gastos" style="display:none;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);">
+              <th style="padding:8px 10px;text-align:left;font-weight:600;">Fecha</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:600;">Establecimiento</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:600;">Categoría</th>
+              <th style="padding:8px 10px;text-align:right;font-weight:600;">Valor</th>
+              <th style="padding:8px 10px;text-align:center;font-weight:600;">Factura</th>
+              <th style="padding:8px 10px;text-align:center;font-weight:600;">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="gastos-body"></tbody>
+        </table>
+      </div>
+      <div id="gastos-empty" style="display:none;text-align:center;padding:40px;color:var(--text-3);font-size:14px;">Sin facturas registradas</div>
+    </div>
+  </div>
+
+  <!-- MODAL CARGAR FACTURA -->
+  <div class="modal-overlay" id="modal-gasto" style="display:none;">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-title"><i class="ti ti-upload"></i> Cargar factura / comprobante</div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px;">
+        <div>
+          <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">ARCHIVO (PDF o imagen)</label>
+          <input type="file" id="gasto-file" accept=".pdf,.jpg,.jpeg,.png" onchange="previewGastoFile(this)" style="font-size:13px;width:100%;">
+        </div>
+        <div id="gasto-extrayendo" style="display:none;padding:12px;background:var(--bg-2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-2);">
+          <i class="ti ti-loader" style="animation:spin 1s linear infinite;"></i> Extrayendo datos del documento...
+        </div>
+        <div id="gasto-campos" style="display:none;flex-direction:column;gap:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">FECHA</label>
+              <input type="date" id="gasto-fecha" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">VALOR (COP)</label>
+              <input type="number" id="gasto-valor" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">ESTABLECIMIENTO</label>
+            <input type="text" id="gasto-estab" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">CATEGORÍA</label>
+            <select id="gasto-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="gasto">Gasto operativo</option>
+              <option value="lote_cartagena">Lote Cartagena</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">OBSERVACIONES</label>
+            <input type="text" id="gasto-obs" placeholder="Opcional" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div id="gasto-drive-path" style="font-size:12px;color:var(--text-3);padding:8px 10px;background:var(--bg-2);border-radius:var(--radius-sm);">
+            <i class="ti ti-folder"></i> Se guardará en: <span id="gasto-drive-path-txt" style="font-weight:600;color:var(--text)"></span>
+          </div>
+        </div>
+      </div>
+      <div id="gasto-msg" style="display:none;margin-top:12px;font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);"></div>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn btn-primary" id="btn-gasto-guardar" onclick="guardarGasto()" style="display:none;"><i class="ti ti-check"></i> Confirmar y guardar</button>
+        <button class="btn btn-secondary" onclick="cerrarModalGasto()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
