@@ -1071,6 +1071,7 @@
                 <th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--border);">Egreso</th>
                 <th style="padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);">Siigo</th>
                 <th style="padding:10px 14px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);">Soporte</th>
+                <th style="padding:10px 14px;border-bottom:1px solid var(--border);width:40px;"></th>
               </tr>
             </thead>
             <tbody id="fc-body"></tbody>
@@ -3914,6 +3915,7 @@ function renderFlujoCaja(){
       ?`<a href="${r.pasaporte_url||r.factura_url}" target="_blank" style="color:var(--accent);font-size:12px;"><i class="ti ti-paperclip"></i> Ver</a>`
       :'<span style="color:var(--text-3)">—</span>';
     const siigo=r.codigo_siigo?`<span style="font-size:11px;color:var(--text-3);">${r.codigo_siigo}</span>`:'<span style="color:var(--text-3)">—</span>';
+    const idStr=String(r.id).replace(/'/g,"\\'");
     return `<tr style="border-bottom:1px solid var(--border);transition:background .15s;" onmouseenter="this.style.background='var(--bg-2)'" onmouseleave="this.style.background=''">
       <td style="padding:10px 14px;white-space:nowrap;font-size:12px;color:var(--text-2);">${fecha}</td>
       <td style="padding:10px 14px;font-weight:500;max-width:260px;">
@@ -3925,8 +3927,61 @@ function renderFlujoCaja(){
       <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--red);font-size:13px;">${r.tipo==='egreso'?fmt(r.valor):'—'}</td>
       <td style="padding:10px 14px;">${siigo}</td>
       <td style="padding:10px 14px;text-align:center;">${soporte}</td>
+      <td style="padding:6px 10px;text-align:center;">
+        <button onclick="abrirEditFC('${idStr}')" title="Editar" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 7px;cursor:pointer;color:var(--text-2);transition:all .15s;" onmouseenter="this.style.background='var(--bg-2)'" onmouseleave="this.style.background='none'"><i class="ti ti-pencil" style="font-size:13px;"></i></button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+let editandoFCId=null;
+function abrirEditFC(id){
+  const r=flujoCajaData.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  editandoFCId=id;
+  document.getElementById('modal-edit-fc-sub').textContent=`ID ${id} · ${r.detalle||''}`;
+  document.getElementById('efc-fecha').value=r.fecha||'';
+  document.getElementById('efc-tipo').value=r.tipo||'egreso';
+  document.getElementById('efc-detalle').value=r.detalle||'';
+  document.getElementById('efc-valor').value=r.valor||'';
+  document.getElementById('efc-cat').value=r.categoria||'gasto';
+  document.getElementById('efc-obs').value=r.observaciones||'';
+  document.getElementById('efc-siigo').value=r.codigo_siigo||'';
+  const msg=document.getElementById('efc-msg');
+  msg.style.display='none';
+  document.getElementById('modal-edit-fc').style.display='flex';
+}
+function cerrarModalEditFC(){
+  document.getElementById('modal-edit-fc').style.display='none';
+  editandoFCId=null;
+}
+async function guardarEdicionFC(){
+  if(!editandoFCId) return;
+  const payload={
+    fecha:document.getElementById('efc-fecha').value||null,
+    tipo:document.getElementById('efc-tipo').value,
+    detalle:document.getElementById('efc-detalle').value||null,
+    valor:parseFloat(document.getElementById('efc-valor').value)||0,
+    categoria:document.getElementById('efc-cat').value||null,
+    observaciones:document.getElementById('efc-obs').value||null,
+    codigo_siigo:document.getElementById('efc-siigo').value||null,
+  };
+  const msg=document.getElementById('efc-msg');
+  msg.style.display='none';
+  try{
+    await supaFetch(`/rest/v1/flujo_caja?id=eq.${editandoFCId}`,{
+      method:'PATCH',
+      body:JSON.stringify(payload)
+    });
+    // actualizar local
+    const idx=flujoCajaData.findIndex(x=>String(x.id)===String(editandoFCId));
+    if(idx>=0) flujoCajaData[idx]={...flujoCajaData[idx],...payload};
+    cerrarModalEditFC();
+    renderFlujoCaja();
+  }catch(e){
+    msg.style.cssText='display:block;background:rgba(239,68,68,.1);color:#ef4444;border-radius:6px;padding:8px 12px;font-size:13px;margin-top:12px;';
+    msg.textContent='Error: '+e.message;
+  }
 }
 
 async function renderGastos(){
@@ -4124,6 +4179,64 @@ const _origConfirmarPago=typeof confirmarPago==='function'?confirmarPago:null;
 // Se llama después de que confirmarPago ya guardó — lo hacemos en un wrapper al final del script
 </script>
 
+
+  <!-- MODAL EDITAR FLUJO CAJA -->
+  <div class="modal-overlay" id="modal-edit-fc" style="display:none;align-items:center;justify-content:center;">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-title"><i class="ti ti-pencil"></i> Editar movimiento</div>
+      <div id="modal-edit-fc-sub" style="font-size:12px;color:var(--text-3);margin-bottom:16px;"></div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">FECHA</label>
+            <input type="date" id="efc-fecha" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">TIPO</label>
+            <select id="efc-tipo" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="ingreso">Ingreso</option>
+              <option value="egreso">Egreso</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">DETALLE</label>
+          <input type="text" id="efc-detalle" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">VALOR (COP)</label>
+            <input type="number" id="efc-valor" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">CATEGORÍA</label>
+            <select id="efc-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="bold_reserva">Bold reserva</option>
+              <option value="lote_cartagena">Lote Cartagena</option>
+              <option value="admon_naio">Admon Naió/Palomino</option>
+              <option value="honorarios">Honorarios</option>
+              <option value="transferencia_socio">Transferencia socio</option>
+              <option value="gasto_externo">Gasto externo</option>
+              <option value="gasto">Gasto operativo</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">OBSERVACIONES</label>
+          <input type="text" id="efc-obs" placeholder="Opcional" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">CÓDIGO SIIGO</label>
+          <input type="text" id="efc-siigo" placeholder="Opcional" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+        </div>
+      </div>
+      <div id="efc-msg" style="display:none;margin-top:12px;font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);"></div>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn btn-primary" onclick="guardarEdicionFC()"><i class="ti ti-check"></i> Guardar cambios</button>
+        <button class="btn btn-secondary" onclick="cerrarModalEditFC()">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL CARGAR FACTURA -->
   <div class="modal-overlay" id="modal-gasto" style="display:none;">
