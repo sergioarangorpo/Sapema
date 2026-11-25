@@ -4031,75 +4031,156 @@ async function registrarEnFlujoCaja(reserva, neto){
 }
 
 // ── Modal Cargar Factura ─────────────────────────────────────────────────────
-let _gastoFileBase64=null, _gastoFileName=null;
+const MESES_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let _gastoFechaDoc=null, _gastoValorDoc=null, _gastoDriveUrl=null;
 
 function abrirModalGasto(){
+  const hoy=new Date();
+  const m=hoy.getMonth()+1;
+  const hint=`Contabilidad Sapema › ${hoy.getFullYear()} › ${m}. ${MESES_ES[m-1]}`;
+  document.getElementById('gasto-carpeta-hint').textContent=hint;
   document.getElementById('modal-gasto').style.display='flex';
   document.getElementById('gasto-campos').style.display='none';
   document.getElementById('gasto-extrayendo').style.display='none';
+  document.getElementById('gasto-arqueo-alerta').style.display='none';
   document.getElementById('btn-gasto-guardar').style.display='none';
-  document.getElementById('gasto-file').value='';
+  document.getElementById('gasto-drive-link').value='';
   document.getElementById('gasto-msg').style.display='none';
-  _gastoFileBase64=null; _gastoFileName=null;
+  _gastoFechaDoc=null; _gastoValorDoc=null; _gastoDriveUrl=null;
 }
 function cerrarModalGasto(){ document.getElementById('modal-gasto').style.display='none'; }
 
-function getDrivePath(fecha, cat){
-  const d=new Date(fecha+'T12:00:00');
-  const y=d.getFullYear();
-  const m=d.getMonth()+1;
-  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const nomMes=m+'. '+meses[m-1];
-  if(cat==='lote_cartagena') return `${y}/${nomMes}/Lote Cartagena`;
-  return `${y}/${nomMes}`;
+function driveFileId(url){
+  const m=url.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+  return m?m[1]:null;
 }
 
-async function previewGastoFile(input){
-  const file=input.files[0]; if(!file) return;
-  _gastoFileName=file.name;
-  const campos=document.getElementById('gasto-campos');
-  const ext=document.getElementById('gasto-extrayendo');
-  const btn=document.getElementById('btn-gasto-guardar');
-  campos.style.display='none'; ext.style.display='block'; btn.style.display='none';
+function extraerFechaTexto(txt){
+  const m1=txt.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
+  if(m1){ const [,d,mo,y]=m1; return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+  const m2=txt.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  if(m2){ return m2[0]; }
+  const nomMes={'enero':'01','febrero':'02','marzo':'03','abril':'04','mayo':'05','junio':'06',
+    'julio':'07','agosto':'08','septiembre':'09','octubre':'10','noviembre':'11','diciembre':'12'};
+  const m3=txt.toLowerCase().match(/(\d{1,2})\s+de\s+([a-záéíóú]+)\s+de\s+(20\d{2})/);
+  if(m3&&nomMes[m3[2]]){ return `${m3[3]}-${nomMes[m3[2]]}-${m3[1].padStart(2,'0')}`; }
+  return null;
+}
 
-  // Leer como base64 para OCR simple con canvas (imágenes) o mostrar campos vacíos para PDF
-  const reader=new FileReader();
-  reader.onload=async function(e){
-    _gastoFileBase64=e.target.result;
-    // Intentar extraer fecha/monto/nombre con heurística simple del nombre del archivo y metadata
-    // Para PDF no podemos extraer en cliente — dejamos campos para que el usuario llene
-    // Para imágenes tampoco sin OCR backend — mostramos campos con fecha de hoy como default
+function extraerValorTexto(txt){
+  const matches=[...txt.matchAll(/\$\s*([\d]{1,3}(?:[.,\s][\d]{3})*(?:[.,]\d{2})?)/g)];
+  if(matches.length){
+    const vals=matches.map(m=>parseFloat(m[1].replace(/[.,\s]/g,''))).filter(v=>v>1000);
+    if(vals.length) return Math.max(...vals);
+  }
+  return null;
+}
+
+async function extraerDesdeDrive(){
+  const link=document.getElementById('gasto-drive-link').value.trim();
+  if(!link){ alert('Pega el link de Drive primero'); return; }
+  const fileId=driveFileId(link);
+  if(!fileId){ alert('Link inválido — debe ser un link de Google Drive'); return; }
+  _gastoDriveUrl=`https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+
+  const ext=document.getElementById('gasto-extrayendo');
+  const campos=document.getElementById('gasto-campos');
+  const btn=document.getElementById('btn-gasto-guardar');
+  ext.style.display='block'; campos.style.display='none'; btn.style.display='none';
+  document.getElementById('gasto-arqueo-alerta').style.display='none';
+
+  try{
+    const exportUrl=`https://drive.google.com/uc?export=download&id=${fileId}`;
+    const res=await fetch(exportUrl,{credentials:'omit'});
+    if(!res.ok) throw new Error('No se pudo descargar el PDF');
+    const buf=await res.arrayBuffer();
+
+    const pdfjsLib=window['pdfjs-dist/build/pdf'];
+    if(!pdfjsLib) throw new Error('pdf.js no disponible');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let textoCompleto='';
+    for(let i=1;i<=Math.min(pdf.numPages,3);i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      textoCompleto+=content.items.map(it=>it.str).join(' ')+'
+';
+    }
+
+    _gastoFechaDoc=extraerFechaTexto(textoCompleto);
+    _gastoValorDoc=extraerValorTexto(textoCompleto);
+
+    const lineas=textoCompleto.split('
+').map(l=>l.trim()).filter(l=>l.length>5);
+    const concepto=lineas.slice(0,4).join(' — ').substring(0,120);
+
     const hoy=new Date().toISOString().split('T')[0];
-    document.getElementById('gasto-fecha').value=hoy;
-    document.getElementById('gasto-valor').value='';
-    // Intentar sacar nombre del establecimiento del nombre de archivo
-    let nomEstab=file.name.replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ').replace(/\d{8}/g,'').trim();
-    document.getElementById('gasto-estab').value=nomEstab;
+    document.getElementById('gasto-fecha').value=_gastoFechaDoc||hoy;
+    document.getElementById('gasto-valor').value=_gastoValorDoc||'';
+    document.getElementById('gasto-estab').value=concepto;
     document.getElementById('gasto-obs').value='';
     document.getElementById('gasto-cat').value='gasto';
-    actualizarDrivePath();
+
     ext.style.display='none';
     campos.style.display='flex';
     btn.style.display='';
-  };
-  reader.readAsDataURL(file);
+    validarArqueo();
+
+  }catch(err){
+    ext.style.display='none';
+    const hoy=new Date().toISOString().split('T')[0];
+    document.getElementById('gasto-fecha').value=hoy;
+    document.getElementById('gasto-valor').value='';
+    document.getElementById('gasto-estab').value='';
+    document.getElementById('gasto-obs').value='';
+    document.getElementById('gasto-cat').value='gasto';
+    campos.style.display='flex';
+    btn.style.display='';
+    const alerta=document.getElementById('gasto-arqueo-alerta');
+    alerta.style.display='block';
+    alerta.style.cssText='display:block;padding:10px 14px;border-radius:var(--radius-sm);border-left:3px solid #94a3b8;background:rgba(148,163,184,.1);font-size:13px;color:var(--text-2);';
+    alerta.innerHTML='ℹ️ No se pudo leer el PDF automáticamente — completa los campos manualmente.';
+  }
 }
 
-function actualizarDrivePath(){
-  const fecha=document.getElementById('gasto-fecha').value;
-  const cat=document.getElementById('gasto-cat').value;
-  const estab=document.getElementById('gasto-estab').value;
-  if(!fecha) return;
-  const path=getDrivePath(fecha,cat);
-  const d=new Date(fecha+'T12:00:00');
-  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-  const nombreArchivo=`${y}${m}${day}_${estab||'documento'}`;
-  document.getElementById('gasto-drive-path-txt').textContent=`Contabilidad Sapema/${path}/${nombreArchivo}`;
-}
+function validarArqueo(){
+  const alerta=document.getElementById('gasto-arqueo-alerta');
+  const fechaIngresada=document.getElementById('gasto-fecha').value;
+  const valorIngresado=parseFloat(document.getElementById('gasto-valor').value)||0;
+  const problemas=[];
+  const badge_f=document.getElementById('gasto-fecha-badge');
+  const badge_v=document.getElementById('gasto-valor-badge');
 
-document.addEventListener('change',function(e){
-  if(e.target.id==='gasto-fecha'||e.target.id==='gasto-cat'||e.target.id==='gasto-estab') actualizarDrivePath();
-});
+  if(_gastoFechaDoc&&fechaIngresada&&_gastoFechaDoc!==fechaIngresada){
+    const docFmt=new Date(_gastoFechaDoc+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    const ingFmt=new Date(fechaIngresada+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    problemas.push(`📅 La factura dice <strong>${docFmt}</strong> pero ingresaste <strong>${ingFmt}</strong>`);
+    badge_f.textContent='⚠ difiere'; badge_f.style.cssText='font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(245,158,11,.2);color:#92400e;';
+  } else {
+    badge_f.textContent=_gastoFechaDoc?'✓ verificada':'';
+    badge_f.style.cssText=_gastoFechaDoc?'font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(34,197,94,.15);color:#166534;':'';
+  }
+
+  if(_gastoValorDoc&&valorIngresado&&Math.abs(_gastoValorDoc-valorIngresado)>100){
+    const fmtDoc=_gastoValorDoc.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+    const fmtIng=valorIngresado.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+    problemas.push(`💰 La factura dice <strong>${fmtDoc}</strong> pero ingresaste <strong>${fmtIng}</strong>`);
+    badge_v.textContent='⚠ difiere'; badge_v.style.cssText='font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(245,158,11,.2);color:#92400e;';
+  } else {
+    badge_v.textContent=_gastoValorDoc?'✓ verificado':'';
+    badge_v.style.cssText=_gastoValorDoc?'font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(34,197,94,.15);color:#166534;':'';
+  }
+
+  if(problemas.length){
+    alerta.style.cssText='display:block;padding:10px 14px;border-radius:var(--radius-sm);border-left:3px solid #f59e0b;background:rgba(245,158,11,.1);font-size:13px;color:#92400e;';
+    alerta.innerHTML='⚠️ <strong>Arqueo:</strong> '+problemas.join('<br>')+'<br><span style="font-size:12px;opacity:.8;">Corrige el campo o guarda igual si estás seguro.</span>';
+  } else if(_gastoFechaDoc||_gastoValorDoc){
+    alerta.style.cssText='display:block;padding:10px 14px;border-radius:var(--radius-sm);border-left:3px solid #22c55e;background:rgba(34,197,94,.1);font-size:13px;color:#166534;';
+    alerta.innerHTML='✅ <strong>Arqueo OK</strong> — Los datos coinciden con el documento.';
+  } else {
+    alerta.style.display='none';
+  }
+}
 
 async function guardarGasto(){
   const fecha=document.getElementById('gasto-fecha').value;
@@ -4107,52 +4188,41 @@ async function guardarGasto(){
   const estab=document.getElementById('gasto-estab').value.trim();
   const cat=document.getElementById('gasto-cat').value;
   const obs=document.getElementById('gasto-obs').value.trim();
+  const driveUrl=_gastoDriveUrl||'';
   const msgEl=document.getElementById('gasto-msg');
 
   if(!fecha||!valor||!estab){
-    msgEl.style.display=''; msgEl.style.background='rgba(239,68,68,.1)'; msgEl.style.color='var(--red)';
-    msgEl.textContent='Por favor completa fecha, valor y establecimiento.'; return;
+    msgEl.style.cssText='display:block;background:rgba(239,68,68,.1);color:var(--red);border-radius:6px;padding:8px 12px;font-size:13px;';
+    msgEl.textContent='Por favor completa fecha, valor y proveedor.'; return;
   }
 
   const btn=document.getElementById('btn-gasto-guardar');
   btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Guardando...';
 
   try{
-    const d=new Date(fecha+'T12:00:00');
-    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-    const nomArchivo=`${y}${m}${day}_${estab}`;
-    const drivePath=getDrivePath(fecha,cat)+'/'+nomArchivo;
-
-    // Guardar en Supabase (Drive upload se hace externamente por ahora)
-    const rec={fecha,valor,establecimiento:estab,categoria:cat,observaciones:obs,
-      drive_path:'Contabilidad Sapema/'+drivePath,
-      confirmado:true, created_by:currentUser?.email||''};
-    await supaFetch('/rest/v1/gastos_facturas',{method:'POST',body:JSON.stringify(rec)});
-
-    // También registrar en flujo de caja como egreso
     await supaFetch('/rest/v1/flujo_caja',{method:'POST',body:JSON.stringify({
-      fecha, tipo:'egreso', valor, detalle:estab.toUpperCase(),
-      categoria:cat, observaciones:obs, created_by:currentUser?.email||''
+      fecha, tipo:'egreso', valor,
+      detalle:estab.toUpperCase(),
+      categoria:cat, observaciones:obs,
+      factura_url:driveUrl||null,
+      created_by:currentUser?.email||''
     })});
 
-    msgEl.style.display=''; msgEl.style.background='rgba(34,197,94,.1)'; msgEl.style.color='#22c55e';
-    msgEl.textContent='\u2713 Guardado correctamente. Ruta Drive: Contabilidad Sapema/'+drivePath;
+    msgEl.style.cssText='display:block;background:rgba(34,197,94,.1);color:#22c55e;border-radius:6px;padding:8px 12px;font-size:13px;';
+    msgEl.innerHTML='✓ Guardado.'+(driveUrl?` <a href="${driveUrl}" target="_blank" style="color:#22c55e;">Ver factura ↗</a>`:'');
     btn.innerHTML='<i class="ti ti-check"></i> Guardado';
 
-    // Recargar datos
     await loadFlujoCaja();
     renderFlujoCaja();
     poblarMesesFlujo();
-    renderGastos();
 
     setTimeout(()=>{ cerrarModalGasto(); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Confirmar y guardar'; },2500);
   }catch(e){
-    msgEl.style.display=''; msgEl.style.background='rgba(239,68,68,.1)'; msgEl.style.color='var(--red)';
+    msgEl.style.cssText='display:block;background:rgba(239,68,68,.1);color:var(--red);border-radius:6px;padding:8px 12px;font-size:13px;';
     msgEl.textContent='Error: '+e.message;
     btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Confirmar y guardar';
   }
 }
-
 // ── Exportar flujo de caja a CSV ─────────────────────────────────────────────
 function exportarFlujoCaja(){
   const mes=document.getElementById('fc-mes')?.value||'';
@@ -4241,44 +4311,54 @@ const _origConfirmarPago=typeof confirmarPago==='function'?confirmarPago:null;
   <!-- MODAL CARGAR FACTURA -->
   <div class="modal-overlay" id="modal-gasto" style="display:none;">
     <div class="modal" style="max-width:520px;">
-      <div class="modal-title"><i class="ti ti-upload"></i> Cargar factura / comprobante</div>
+      <div class="modal-title"><i class="ti ti-brand-google-drive"></i> Registrar factura / comprobante</div>
       <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px;">
-        <div>
-          <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">ARCHIVO (PDF o imagen)</label>
-          <input type="file" id="gasto-file" accept=".pdf,.jpg,.jpeg,.png" onchange="previewGastoFile(this)" style="font-size:13px;width:100%;">
+        <!-- PASO 1: Link de Drive -->
+        <div style="background:var(--bg-2);border-radius:var(--radius-sm);padding:12px 14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Paso 1 — Sube el PDF a Drive y pega el link aquí</div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">📁 Carpeta correcta: <span id="gasto-carpeta-hint" style="font-weight:600;color:var(--accent);">Contabilidad Sapema › 2026 › 11. Noviembre</span></div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="gasto-drive-link" placeholder="https://drive.google.com/file/d/..." style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+            <button class="btn btn-secondary" onclick="extraerDesdeDrive()" style="white-space:nowrap;"><i class="ti ti-search"></i> Leer PDF</button>
+          </div>
         </div>
         <div id="gasto-extrayendo" style="display:none;padding:12px;background:var(--bg-2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-2);">
-          <i class="ti ti-loader" style="animation:spin 1s linear infinite;"></i> Extrayendo datos del documento...
+          <i class="ti ti-loader" style="animation:spin 1s linear infinite;"></i> Leyendo documento desde Drive...
         </div>
+        <!-- ALERTA ARQUEO -->
+        <div id="gasto-arqueo-alerta" style="display:none;padding:10px 14px;border-radius:var(--radius-sm);border-left:3px solid #f59e0b;background:rgba(245,158,11,.1);font-size:13px;color:#92400e;"></div>
+        <!-- PASO 2: Campos -->
         <div id="gasto-campos" style="display:none;flex-direction:column;gap:12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Paso 2 — Confirma o corrige los datos</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
-              <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">FECHA</label>
-              <input type="date" id="gasto-fecha" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+              <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">FECHA <span id="gasto-fecha-badge" style="font-size:10px;padding:1px 6px;border-radius:8px;"></span></label>
+              <input type="date" id="gasto-fecha" oninput="validarArqueo()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
             </div>
             <div>
-              <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">VALOR (COP)</label>
-              <input type="number" id="gasto-valor" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+              <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">VALOR (COP) <span id="gasto-valor-badge" style="font-size:10px;padding:1px 6px;border-radius:8px;"></span></label>
+              <input type="number" id="gasto-valor" oninput="validarArqueo()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
             </div>
           </div>
           <div>
-            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">ESTABLECIMIENTO</label>
+            <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">PROVEEDOR / CONCEPTO</label>
             <input type="text" id="gasto-estab" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
           </div>
           <div>
             <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">CATEGORÍA</label>
             <select id="gasto-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;">
               <option value="gasto">Gasto operativo</option>
+              <option value="bold_reserva">Bold reserva</option>
               <option value="lote_cartagena">Lote Cartagena</option>
-              <option value="otro">Otro</option>
+              <option value="admon_naio">Admon Naió/Palomino</option>
+              <option value="honorarios">Honorarios</option>
+              <option value="transferencia_socio">Transferencia socio</option>
+              <option value="gasto_externo">Gasto externo</option>
             </select>
           </div>
           <div>
             <label style="font-size:12px;color:var(--text-3);font-weight:600;display:block;margin-bottom:4px;">OBSERVACIONES</label>
             <input type="text" id="gasto-obs" placeholder="Opcional" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
-          </div>
-          <div id="gasto-drive-path" style="font-size:12px;color:var(--text-3);padding:8px 10px;background:var(--bg-2);border-radius:var(--radius-sm);">
-            <i class="ti ti-folder"></i> Se guardará en: <span id="gasto-drive-path-txt" style="font-weight:600;color:var(--text)"></span>
           </div>
         </div>
       </div>
