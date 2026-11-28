@@ -2629,6 +2629,29 @@ function sortNaio(col){
   generarCalNaio();
 }
 
+// Lista unificada del calendario Naio: fusiona registros del mismo huésped y villa
+// con fechas solapadas o contiguas (reservas cruzadas Nico/bolsa) y filtra por check in.
+function calNaioLista(anio,mes){
+  const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
+  const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
+  const base=reservas.filter(r=>['M1','L3','H4'].includes(r.prop)&&r.entrada).slice().sort((a,b)=>a.entrada.localeCompare(b.entrada));
+  const merged=[];
+  base.forEach(r=>{
+    if(!r.huesped||r.huesped.startsWith('BOLSA OXO')){merged.push({...r});return;}
+    const rE=r.entrada,rS=r.salida||r.entrada;
+    const ex=merged.find(m=>m.prop===r.prop&&m.huesped===r.huesped&&!m.huesped.startsWith('BOLSA OXO')&&rE<=(m.salida||m.entrada)&&rS>=m.entrada);
+    if(ex){
+      if(rE<ex.entrada)ex.entrada=rE;
+      if(rS>(ex.salida||ex.entrada))ex.salida=rS;
+      ex.noches=Math.round((new Date(ex.salida)-new Date(ex.entrada))/86400000);
+      if((r.personas||0)>(ex.personas||0))ex.personas=r.personas;
+      ex._merged=true;
+    }else merged.push({...r,salida:rS});
+  });
+  return merged.filter(r=>r.entrada>=inicio&&r.entrada<=fin)
+    .sort((a,b)=>a.prop.localeCompare(b.prop)||a.entrada.localeCompare(b.entrada));
+}
+
 function generarCalNaio(){
   const mes=parseInt(document.getElementById('naio-mes').value);
   const anio=parseInt(document.getElementById('naio-anio').value);
@@ -2636,35 +2659,7 @@ function generarCalNaio(){
   const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
   const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
   const propsPalomino=['M1','L3','H4'];
-  let lista=reservas.filter(r=>{
-    if(!propsPalomino.includes(r.prop)) return false;
-    if(!r.entrada) return false;
-    const e=r.entrada, s=r.salida||r.entrada;
-    return e>=inicio && e<=fin; // por check in
-  });
-  // Fusionar reservas: mismo huesped + misma prop + fechas solapadas o contiguas
-  const merged=[];
-  lista.forEach(r=>{
-    if(!r.huesped||r.huesped.startsWith('BOLSA OXO')){merged.push(r);return;}
-    const rE=r.entrada||'', rS=r.salida||r.entrada||'';
-    // Buscar reserva existente que se solape o toque (margen 1 dia)
-    const existing=merged.find(m=>{
-      if(m.prop!==r.prop||m.huesped!==r.huesped) return false;
-      const mE=m.entrada||'', mS=m.salida||m.entrada||'';
-      // Se solapan si la entrada de uno es <= salida del otro + 1 dia
-      return rE<=mS && rS>=mE;
-    });
-    if(existing){
-      if(rE<existing.entrada) existing.entrada=rE;
-      if(rS>existing.salida) existing.salida=rS;
-      const d1=new Date(existing.entrada),d2=new Date(existing.salida);
-      existing.noches=Math.round((d2-d1)/86400000);
-      if(!existing.personas||r.personas>existing.personas) existing.personas=r.personas;
-      existing._merged=true;
-    } else {
-      merged.push({...r});
-    }
-  });
+  const merged=calNaioLista(anio,mes);
 
   merged.sort((a,b)=>{
     if(naioSortCol==='noches'||naioSortCol==='personas') return ((a[naioSortCol]||0)-(b[naioSortCol]||0))*naioSortDir;
@@ -2689,12 +2684,7 @@ function descargarCalNaio(){
   const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
   const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
   const propsPalomino=['M1','L3','H4'];
-  const lista=reservas.filter(r=>{
-    if(!propsPalomino.includes(r.prop)) return false;
-    if(!r.entrada) return false;
-    const e=r.entrada,s=r.salida||r.entrada;
-    return e>=inicio&&e<=fin; // por check in
-  }).sort((a,b)=>a.prop.localeCompare(b.prop)||a.entrada.localeCompare(b.entrada));
+  const lista=calNaioLista(anio,mes);
   const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
   const headers=['CHECK IN','CHECK OUT','NOCHES','NOMBRE HUESPED','CANTIDAD HUESPEDES','VILLA'];
   const rows=lista.map(r=>[r.entrada,r.salida||'',r.noches||0,r.huesped||'',r.personas||0,nombreVilla(r.prop)]);
@@ -2712,12 +2702,7 @@ function enviarNaio(){
   const inicio=`${anio}-${String(mes).padStart(2,'0')}-01`;
   const fin=`${anio}-${String(mes).padStart(2,'0')}-${new Date(anio,mes,0).getDate()}`;
   const propsPalomino=['M1','L3','H4'];
-  const lista=reservas.filter(r=>{
-    if(!propsPalomino.includes(r.prop)) return false;
-    if(!r.entrada) return false;
-    const e=r.entrada,s=r.salida||r.entrada;
-    return e>=inicio&&e<=fin; // por check in
-  }).sort((a,b)=>a.prop.localeCompare(b.prop)||a.entrada.localeCompare(b.entrada));
+  const lista=calNaioLista(anio,mes);
   const nombreVilla=p=>p==='M1'?'M1':p==='L3'?'L3':'H4';
   const to='reservasnaio@oxohotel.com';
   const cc='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
