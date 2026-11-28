@@ -2623,7 +2623,7 @@ function renderPendientes(){
 }
 
 // ---- REPORTES ----
-let naioSortCol='entrada', naioSortDir=1;
+let naioSortCol='prop', naioSortDir=1;
 function sortNaio(col){
   if(naioSortCol===col) naioSortDir*=-1; else {naioSortCol=col;naioSortDir=1;}
   generarCalNaio();
@@ -2640,7 +2640,7 @@ function generarCalNaio(){
     if(!propsPalomino.includes(r.prop)) return false;
     if(!r.entrada) return false;
     const e=r.entrada, s=r.salida||r.entrada;
-    return e<=fin && s>=inicio;
+    return e>=inicio && e<=fin; // por check in
   });
   // Fusionar reservas: mismo huesped + misma prop + fechas solapadas o contiguas
   const merged=[];
@@ -2668,7 +2668,7 @@ function generarCalNaio(){
 
   merged.sort((a,b)=>{
     if(naioSortCol==='noches'||naioSortCol==='personas') return ((a[naioSortCol]||0)-(b[naioSortCol]||0))*naioSortDir;
-    return ((a[naioSortCol]||'').localeCompare(b[naioSortCol]||''))*naioSortDir;
+    return ((a[naioSortCol]||'').localeCompare(b[naioSortCol]||''))*naioSortDir||(a.entrada||'').localeCompare(b.entrada||'');
   });
   const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
   const th=(label,col)=>`<th style="cursor:pointer;user-select:none" onclick="sortNaio('${col}')">${label} ${naioSortCol===col?(naioSortDir===1?'↑':'↓'):'↕'}</th>`;
@@ -2693,8 +2693,8 @@ function descargarCalNaio(){
     if(!propsPalomino.includes(r.prop)) return false;
     if(!r.entrada) return false;
     const e=r.entrada,s=r.salida||r.entrada;
-    return e<=fin&&s>=inicio;
-  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
+    return e>=inicio&&e<=fin; // por check in
+  }).sort((a,b)=>a.prop.localeCompare(b.prop)||a.entrada.localeCompare(b.entrada));
   const nombreVilla=p=>p==='M1'?'Naio M1':p==='L3'?'Naio L3':'Naio H4';
   const headers=['CHECK IN','CHECK OUT','NOCHES','NOMBRE HUESPED','CANTIDAD HUESPEDES','VILLA'];
   const rows=lista.map(r=>[r.entrada,r.salida||'',r.noches||0,r.huesped||'',r.personas||0,nombreVilla(r.prop)]);
@@ -2716,8 +2716,8 @@ function enviarNaio(){
     if(!propsPalomino.includes(r.prop)) return false;
     if(!r.entrada) return false;
     const e=r.entrada,s=r.salida||r.entrada;
-    return e<=fin&&s>=inicio;
-  }).sort((a,b)=>a.entrada.localeCompare(b.entrada));
+    return e>=inicio&&e<=fin; // por check in
+  }).sort((a,b)=>a.prop.localeCompare(b.prop)||a.entrada.localeCompare(b.entrada));
   const nombreVilla=p=>p==='M1'?'M1':p==='L3'?'L3':'H4';
   const to='reservasnaio@oxohotel.com';
   const cc='llondono1983@gmail.com,frontdesknaio@oxohotel.com,mfrontnaio@oxohotel.com,sergioarangorpo@gmail.com';
